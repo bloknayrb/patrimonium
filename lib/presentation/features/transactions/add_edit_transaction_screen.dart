@@ -1,0 +1,513 @@
+import 'package:drift/drift.dart' hide Column;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/di/providers.dart';
+import '../../../core/extensions/money_extensions.dart';
+import '../../../data/local/database/app_database.dart';
+import '../accounts/accounts_providers.dart';
+import 'transactions_providers.dart';
+
+/// Add or edit a financial transaction.
+class AddEditTransactionScreen extends ConsumerStatefulWidget {
+  final Transaction? transaction;
+
+  const AddEditTransactionScreen({super.key, this.transaction});
+
+  @override
+  ConsumerState<AddEditTransactionScreen> createState() =>
+      _AddEditTransactionScreenState();
+}
+
+class _AddEditTransactionScreenState
+    extends ConsumerState<AddEditTransactionScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _payeeController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _tagsController = TextEditingController();
+
+  DateTime _selectedDate = DateTime.now();
+  String? _selectedAccountId;
+  String? _selectedCategoryId;
+  String? _selectedCategoryName;
+  bool _isExpense = true;
+  bool _isSaving = false;
+
+  bool get _isEditing => widget.transaction != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final t = widget.transaction!;
+      _payeeController.text = t.payee;
+      _amountController.text = t.amountCents.abs().toCurrencyValue();
+      _notesController.text = t.notes ?? '';
+      _tagsController.text = t.tags ?? '';
+      _selectedDate = DateTime.fromMillisecondsSinceEpoch(t.date);
+      _selectedAccountId = t.accountId;
+      _selectedCategoryId = t.categoryId;
+      _isExpense = t.amountCents < 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _payeeController.dispose();
+    _amountController.dispose();
+    _notesController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  void _showCategoryPicker() {
+    final categoriesAsync = _isExpense
+        ? ref.read(expenseCategoriesProvider)
+        : ref.read(incomeCategoriesProvider);
+
+    categoriesAsync.whenData((categories) {
+      // Build hierarchical list
+      final parents = categories.where((c) => c.parentId == null).toList();
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Category',
+                      style: Theme.of(ctx).textTheme.titleLarge,
+                    ),
+                    if (_selectedCategoryId != null)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedCategoryId = null;
+                            _selectedCategoryName = null;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Clear'),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    for (final parent in parents) ...[
+                      // Parent category
+                      ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Color(parent.color).withValues(alpha: 0.15),
+                          child: Icon(
+                            Icons.category,
+                            color: Color(parent.color),
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          parent.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        selected: _selectedCategoryId == parent.id,
+                        onTap: () {
+                          setState(() {
+                            _selectedCategoryId = parent.id;
+                            _selectedCategoryName = parent.name;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      // Child categories
+                      for (final child in categories
+                          .where((c) => c.parentId == parent.id))
+                        ListTile(
+                          contentPadding:
+                              const EdgeInsets.only(left: 56, right: 16),
+                          title: Text(child.name),
+                          selected: _selectedCategoryId == child.id,
+                          onTap: () {
+                            setState(() {
+                              _selectedCategoryId = child.id;
+                              _selectedCategoryName = child.name;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final repo = ref.read(transactionRepositoryProvider);
+      final rawCents = _amountController.text.toCents()!;
+      final amountCents = _isExpense ? -rawCents.abs() : rawCents.abs();
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      if (_isEditing) {
+        await repo.updateTransaction(TransactionsCompanion(
+          id: Value(widget.transaction!.id),
+          accountId: Value(_selectedAccountId!),
+          amountCents: Value(amountCents),
+          date: Value(_selectedDate.millisecondsSinceEpoch),
+          payee: Value(_payeeController.text.trim()),
+          notes: _notesController.text.trim().isEmpty
+              ? const Value(null)
+              : Value(_notesController.text.trim()),
+          categoryId: _selectedCategoryId == null
+              ? const Value(null)
+              : Value(_selectedCategoryId),
+          tags: _tagsController.text.trim().isEmpty
+              ? const Value(null)
+              : Value(_tagsController.text.trim()),
+          updatedAt: Value(now),
+        ));
+      } else {
+        await repo.insertTransaction(TransactionsCompanion.insert(
+          id: const Uuid().v4(),
+          accountId: _selectedAccountId!,
+          amountCents: amountCents,
+          date: _selectedDate.millisecondsSinceEpoch,
+          payee: _payeeController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? const Value(null)
+              : Value(_notesController.text.trim()),
+          categoryId: _selectedCategoryId == null
+              ? const Value(null)
+              : Value(_selectedCategoryId),
+          tags: _tagsController.text.trim().isEmpty
+              ? const Value(null)
+              : Value(_tagsController.text.trim()),
+          createdAt: now,
+          updatedAt: now,
+        ));
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                _isEditing ? 'Transaction updated' : 'Transaction added'),
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Transaction'),
+        content: const Text(
+          'Are you sure you want to delete this transaction?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(transactionRepositoryProvider)
+          .deleteTransaction(widget.transaction!.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction deleted')),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final accountsAsync = ref.watch(accountsProvider);
+
+    // Resolve category name if editing and not yet set
+    if (_isEditing && _selectedCategoryName == null && _selectedCategoryId != null) {
+      ref.watch(allCategoriesProvider).whenData((cats) {
+        final cat = cats.where((c) => c.id == _selectedCategoryId).firstOrNull;
+        if (cat != null && _selectedCategoryName == null) {
+          _selectedCategoryName = cat.name;
+        }
+      });
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Transaction' : 'Add Transaction'),
+        actions: [
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Delete',
+              onPressed: _isSaving ? null : _delete,
+            ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Income / Expense toggle
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: true,
+                  label: Text('Expense'),
+                  icon: Icon(Icons.arrow_upward),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('Income'),
+                  icon: Icon(Icons.arrow_downward),
+                ),
+              ],
+              selected: {_isExpense},
+              onSelectionChanged: _isSaving
+                  ? null
+                  : (v) {
+                      setState(() {
+                        _isExpense = v.first;
+                        // Reset category since type changed
+                        _selectedCategoryId = null;
+                        _selectedCategoryName = null;
+                      });
+                    },
+            ),
+            const SizedBox(height: 20),
+
+            // Payee
+            TextFormField(
+              controller: _payeeController,
+              decoration: const InputDecoration(
+                labelText: 'Payee / Description *',
+                hintText: 'e.g., Grocery Store',
+                filled: true,
+              ),
+              textCapitalization: TextCapitalization.words,
+              enabled: !_isSaving,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Payee is required' : null,
+            ),
+            const SizedBox(height: 16),
+
+            // Amount
+            TextFormField(
+              controller: _amountController,
+              decoration: InputDecoration(
+                labelText: 'Amount *',
+                hintText: '0.00',
+                prefixText: '\$ ',
+                filled: true,
+                suffixIcon: Icon(
+                  _isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline,
+                  color: _isExpense ? colorScheme.error : Colors.green,
+                ),
+              ),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              enabled: !_isSaving,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Amount is required';
+                final cents = v.toCents();
+                if (cents == null || cents <= 0) return 'Enter a valid amount';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Date
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Date'),
+              subtitle: Text(_selectedDate.toMediumDate()),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _isSaving ? null : _pickDate,
+            ),
+            const Divider(),
+
+            // Account
+            accountsAsync.when(
+              loading: () => const ListTile(
+                leading: Icon(Icons.account_balance),
+                title: Text('Loading accounts...'),
+              ),
+              error: (_, __) => const ListTile(
+                leading: Icon(Icons.error),
+                title: Text('Error loading accounts'),
+              ),
+              data: (accounts) {
+                if (accounts.isEmpty) {
+                  return ListTile(
+                    leading: const Icon(Icons.warning),
+                    title: const Text('No accounts'),
+                    subtitle: const Text('Create an account first'),
+                    tileColor: colorScheme.errorContainer.withValues(alpha: 0.3),
+                  );
+                }
+
+                // Auto-select first account if none selected
+                _selectedAccountId ??= accounts.first.id;
+
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedAccountId,
+                  decoration: const InputDecoration(
+                    labelText: 'Account *',
+                    filled: true,
+                  ),
+                  items: accounts.map((a) {
+                    return DropdownMenuItem(
+                      value: a.id,
+                      child: Text(a.name),
+                    );
+                  }).toList(),
+                  onChanged: _isSaving
+                      ? null
+                      : (v) => setState(() => _selectedAccountId = v),
+                  validator: (v) => v == null ? 'Select an account' : null,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Category
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.category),
+              title: const Text('Category'),
+              subtitle: Text(
+                _selectedCategoryName ?? 'Uncategorized',
+                style: _selectedCategoryId == null
+                    ? TextStyle(color: colorScheme.onSurfaceVariant)
+                    : null,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _isSaving ? null : _showCategoryPicker,
+            ),
+            const Divider(),
+
+            // Notes
+            TextFormField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Optional notes...',
+                filled: true,
+              ),
+              maxLines: 3,
+              enabled: !_isSaving,
+            ),
+            const SizedBox(height: 16),
+
+            // Tags
+            TextFormField(
+              controller: _tagsController,
+              decoration: const InputDecoration(
+                labelText: 'Tags',
+                hintText: 'Comma-separated tags',
+                filled: true,
+              ),
+              enabled: !_isSaving,
+            ),
+            const SizedBox(height: 32),
+
+            // Save button
+            FilledButton(
+              onPressed: _isSaving ? null : _save,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      _isEditing ? 'Save Changes' : 'Add Transaction'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
