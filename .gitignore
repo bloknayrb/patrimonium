@@ -53,3 +53,7 @@ android/key.properties
 /debug-info/
 *.apk
 *.aab
+
+# Environment files
+.env
+.env.*

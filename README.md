@@ -1,102 +1,79 @@
 # Patrimonium
 
-Personal finance management app built with Flutter. Tracks accounts, transactions, budgets, and provides AI-assisted insights. Targets Android and Linux desktop.
+A personal finance management app built with Flutter, featuring local-first data storage, AI-powered insights, and bank connectivity.
 
-## Status
+## Features
 
-- **Accounts & transactions**: Working. CRUD for 18 account types, transaction filtering/search, category hierarchy, CSV export.
-- **Dashboard**: Net worth, cash flow, budget health, recent transactions.
-- **Auth**: PIN login (PBKDF2-hashed), biometric unlock, auto-lock on background.
-- **Not yet built**: Bank sync (SimpleFIN), CSV/OFX import, budgets, recurring transactions, goals, investment tracking, AI assistant backend, Supabase sync.
+- **PIN Security** — PBKDF2-HMAC-SHA256 hashed PIN with auto-lock on backgrounding
+- **Accounts** — Track 18 account types (checking, savings, credit card, investment, etc.) with full CRUD
+- **Transactions** — Record income and expenses with category tagging, filtering, and search
+- **Dashboard** — At-a-glance summary with charts (fl_chart) showing balances, spending trends, and recent activity
+- **Categories** — 16 expense and 7 income parent categories with subcategories, seeded on first launch
+- **Data Export** — CSV export for accounts and transactions
+- **Material 3 Theming** — Dynamic color support with semantic finance colors (income=green, expense=red)
+- **Offline-First** — All data stored locally in SQLite via Drift ORM
 
-## Requirements
+## Platforms
 
-- Flutter 3.38+
-- Android SDK or Linux desktop toolchain
-- No web support (`dart:ffi` dependency)
+- Android
+- Linux desktop
 
-## Setup
-
-```bash
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-```
-
-## Build & Run
-
-```bash
-# Run on connected device/emulator
-flutter run
-
-# Android
-flutter build apk --debug
-flutter build apk --release
-
-# Linux desktop
-flutter build linux
-```
-
-## Tests
-
-```bash
-flutter test
-flutter test test/unit/some_test.dart  # single file
-```
-
-Test coverage is minimal. Only a placeholder smoke test exists.
-
-## Analysis
-
-```bash
-flutter analyze
-```
-
-## Code Generation
-
-After changing any Drift table definition in `lib/data/local/database/app_database.dart`:
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-## Project Layout
-
-```
-lib/
-├── core/           # Config, DI (Riverpod providers), errors, extensions, routing, theme
-├── data/           # Drift database (21 tables), secure storage, repositories
-├── domain/         # Use cases: PIN auth, biometrics, category seeding, CSV export
-├── presentation/   # Screens and widgets organized by feature
-├── app.dart        # Root MaterialApp, auto-lock lifecycle observer
-└── main.dart       # Database init, category seeding, ProviderScope
-```
+> Web builds are not supported due to a `dart:ffi` dependency (sqlite3).
 
 ## Architecture
 
-Three-layer clean architecture:
+Clean Architecture with three layers:
 
-- **data/** — Drift SQLite database, `flutter_secure_storage`, repository implementations
-- **domain/** — Business logic services (PIN hashing, biometrics, export)
-- **presentation/** — Screens, Riverpod providers, widgets
+```
+lib/
+├── core/          # Constants, DI (Riverpod), extensions, routing (GoRouter), theme
+├── data/          # Drift database, repositories, secure storage
+├── domain/        # Use cases, business logic, auth
+└── presentation/  # Screens, providers, shared widgets
+```
 
-State management uses manual Riverpod providers (not `riverpod_generator`). Feature providers use `.autoDispose`. GoRouter handles navigation with auth-aware redirects.
+**State Management**: Manual Riverpod providers (not riverpod_generator).
+**Database**: Drift with 21 tables — money as integer cents, UUIDs for PKs, Unix ms for timestamps.
+**Routing**: GoRouter with `StatefulShellRoute.indexedStack` for 5-tab bottom navigation.
 
-## Conventions
+See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation, build commands, and development conventions.
 
-- All money stored as **integer cents** (e.g., `$123.45` = `12345`). No floating point.
-- Expenses are **negative**, income is **positive**.
-- Primary keys are text UUIDs.
-- Timestamps are integer Unix milliseconds.
+## Status
 
-## Dependencies
+```bash
+# Install dependencies
+flutter pub get
 
-| Area | Packages |
-|------|----------|
-| State | flutter_riverpod |
-| Database | drift, sqlite3_flutter_libs |
-| Routing | go_router |
-| HTTP | dio |
-| Charts | fl_chart |
-| Security | flutter_secure_storage, local_auth, crypto |
-| Theme | dynamic_color |
-| Testing | mocktail |
+# Run code generation (Drift)
+dart run build_runner build --delete-conflicting-outputs
+
+# Run the app
+flutter run
+
+# Run tests
+flutter test
+
+# Build release APK
+flutter build apk --release
+```
+
+## Project Status
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 — Foundation | Complete | Database, auth, theme, repositories, routing, settings |
+| Phase 2 — Accounts & Transactions | Complete | Accounts CRUD, transactions CRUD, dashboard, category picker |
+| Phase 3 — Bank Connectivity | Next | SimpleFIN integration, CSV/OFX import |
+
+## Development Guidelines
+
+Development conventions, testing patterns, performance guidelines, and deployment checklists are documented in [CLAUDE.md](CLAUDE.md). Key points:
+
+- All money values are **integer cents** (never floating point)
+- Expenses are stored as **negative** `amountCents`
+- Use `flutter analyze` to check for lint issues before committing
+- Run `dart run build_runner build --delete-conflicting-outputs` after changing Drift table schemas
+
+## Acknowledgments
+
+Flutter development guidelines in this project were informed by [flutter-claude-code](https://github.com/cleydson/flutter-claude-code) by [@cleydson](https://github.com/cleydson) — a comprehensive Flutter development ecosystem with specialized agent patterns covering architecture, testing, performance optimization, security, API integration, and deployment best practices.
