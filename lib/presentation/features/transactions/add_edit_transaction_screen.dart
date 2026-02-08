@@ -89,9 +89,9 @@ class _AddEditTransactionScreenState
         selectedCategoryId: _selectedCategoryId,
       );
 
-      if (!mounted) return;
+      if (!mounted || result == null) return;
 
-      if (result == null) {
+      if (result.cleared) {
         setState(() {
           _selectedCategoryId = null;
           _selectedCategoryName = null;

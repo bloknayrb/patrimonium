@@ -2,17 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../../../data/local/database/app_database.dart';
 
-/// Result returned when a category is selected.
+/// Result returned from the category picker bottom sheet.
+///
+/// [cleared] is true when the user explicitly tapped "Clear".
+/// A null return from [showCategoryPickerSheet] means the sheet was dismissed
+/// without action (the caller should preserve the current selection).
 class CategoryPickerResult {
-  final String id;
-  final String name;
+  final String? id;
+  final String? name;
+  final bool cleared;
 
-  const CategoryPickerResult({required this.id, required this.name});
+  const CategoryPickerResult({this.id, this.name, this.cleared = false});
+
+  const CategoryPickerResult.cleared() : id = null, name = null, cleared = true;
 }
 
 /// Shows a hierarchical category picker bottom sheet.
 ///
-/// Returns the selected [CategoryPickerResult], or null if cleared/dismissed.
+/// Returns a [CategoryPickerResult] with the selected category, a
+/// [CategoryPickerResult.cleared] if the user tapped "Clear", or null if
+/// the sheet was dismissed without making a selection.
 Future<CategoryPickerResult?> showCategoryPickerSheet({
   required BuildContext context,
   required List<Category> categories,
@@ -40,7 +49,10 @@ Future<CategoryPickerResult?> showCategoryPickerSheet({
                 Text(title, style: Theme.of(ctx).textTheme.titleLarge),
                 if (showClear && selectedCategoryId != null)
                   TextButton(
-                    onPressed: () => Navigator.pop(ctx, null),
+                    onPressed: () => Navigator.pop(
+                      ctx,
+                      const CategoryPickerResult.cleared(),
+                    ),
                     child: const Text('Clear'),
                   ),
               ],

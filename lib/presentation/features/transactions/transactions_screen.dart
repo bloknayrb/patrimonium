@@ -276,7 +276,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
   final _minAmountController = TextEditingController();
   final _maxAmountController = TextEditingController();
 
-  // Display names resolved in initState
+  // Display names resolved lazily in build()
   String? _categoryName;
   String? _accountName;
 
@@ -290,26 +290,6 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
     if (_filters.maxAmountCents != null) {
       _maxAmountController.text = _filters.maxAmountCents!.toCurrencyValue();
     }
-
-    // Resolve display names from IDs
-    _resolveCategoryName();
-    _resolveAccountName();
-  }
-
-  void _resolveCategoryName() {
-    if (_filters.categoryId == null) return;
-    ref.read(allCategoriesProvider).whenData((cats) {
-      final cat = cats.where((c) => c.id == _filters.categoryId).firstOrNull;
-      if (cat != null) setState(() => _categoryName = cat.name);
-    });
-  }
-
-  void _resolveAccountName() {
-    if (_filters.accountId == null) return;
-    ref.read(accountsProvider).whenData((accts) {
-      final acct = accts.where((a) => a.id == _filters.accountId).firstOrNull;
-      if (acct != null) setState(() => _accountName = acct.name);
-    });
   }
 
   @override
@@ -357,9 +337,9 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
         title: 'Filter by Category',
       );
 
-      if (!mounted) return;
+      if (!mounted || result == null) return;
 
-      if (result == null) {
+      if (result.cleared) {
         setState(() {
           _filters = _filters.copyWith(clearCategory: true);
           _categoryName = null;
@@ -461,6 +441,20 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Resolve display names reactively (handles async provider loading)
+    if (_filters.categoryId != null && _categoryName == null) {
+      ref.watch(allCategoriesProvider).whenData((cats) {
+        final cat = cats.where((c) => c.id == _filters.categoryId).firstOrNull;
+        if (cat != null) _categoryName = cat.name;
+      });
+    }
+    if (_filters.accountId != null && _accountName == null) {
+      ref.watch(accountsProvider).whenData((accts) {
+        final acct = accts.where((a) => a.id == _filters.accountId).firstOrNull;
+        if (acct != null) _accountName = acct.name;
+      });
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16),
