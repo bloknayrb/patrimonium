@@ -178,6 +178,16 @@ class TransactionRepository {
     return result.isNotEmpty;
   }
 
+  /// Get count of uncategorized transactions.
+  Future<int> getUncategorizedCount() async {
+    final count = _db.transactions.id.count();
+    final result = await (_db.selectOnly(_db.transactions)
+          ..where(_db.transactions.categoryId.isNull())
+          ..addColumns([count]))
+        .getSingle();
+    return result.read(count) ?? 0;
+  }
+
   /// Get transaction count.
   Future<int> getTransactionCount() async {
     final count = _db.transactions.id.count();

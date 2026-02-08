@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/providers.dart';
+import '../../../core/router/app_router.dart';
 import '../../shared/widgets/pin_number_pad.dart';
 
 /// Lock screen with PIN entry and optional biometric authentication.
@@ -66,7 +66,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     if (isValid) {
       // Mark as unlocked and navigate to dashboard
       ref.read(isUnlockedProvider.notifier).state = true;
-      context.go('/dashboard');
+      context.go(AppRoutes.dashboard);
     } else {
       setState(() {
         _isError = true;
@@ -109,7 +109,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 
     if (success) {
       ref.read(isUnlockedProvider.notifier).state = true;
-      context.go('/dashboard');
+      context.go(AppRoutes.dashboard);
     }
   }
 

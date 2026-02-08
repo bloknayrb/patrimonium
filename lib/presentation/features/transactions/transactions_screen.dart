@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
 import '../../shared/loading/shimmer_loading.dart';
+import '../../shared/widgets/category_picker_sheet.dart';
 import '../accounts/accounts_providers.dart';
 import 'add_edit_transaction_screen.dart';
 import 'transactions_providers.dart';
@@ -116,13 +117,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 }
 
 /// Transaction list grouped by date.
-class _TransactionListView extends StatelessWidget {
+class _TransactionListView extends ConsumerWidget {
   final List<Transaction> transactions;
 
   const _TransactionListView({required this.transactions});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Build category lookup map once at the list level
+    final categoriesAsync = ref.watch(allCategoriesProvider);
+    final categoryNames = <String, String>{};
+    categoriesAsync.whenData((categories) {
+      for (final c in categories) {
+        categoryNames[c.id] = c.name;
+      }
+    });
+
     // Group transactions by date
     final grouped = _groupByDate(transactions);
 
@@ -136,7 +146,12 @@ class _TransactionListView extends StatelessWidget {
           children: [
             _DateHeader(date: entry.key),
             for (final transaction in entry.value)
-              _TransactionTile(transaction: transaction),
+              _TransactionTile(
+                transaction: transaction,
+                categoryName: transaction.categoryId != null
+                    ? categoryNames[transaction.categoryId!]
+                    : null,
+              ),
           ],
         );
       },
@@ -174,27 +189,21 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-class _TransactionTile extends ConsumerWidget {
+class _TransactionTile extends StatelessWidget {
   final Transaction transaction;
+  final String? categoryName;
 
-  const _TransactionTile({required this.transaction});
+  const _TransactionTile({
+    required this.transaction,
+    this.categoryName,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final finance = theme.finance;
     final isIncome = transaction.amountCents > 0;
-    final categoriesAsync = ref.watch(allCategoriesProvider);
-
-    // Find category name
-    String? categoryName;
-    if (transaction.categoryId != null) {
-      categoriesAsync.whenData((categories) {
-        final cat = categories.where((c) => c.id == transaction.categoryId).firstOrNull;
-        if (cat != null) categoryName = cat.name;
-      });
-    }
 
     return ListTile(
       leading: CircleAvatar(
@@ -267,7 +276,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
   final _minAmountController = TextEditingController();
   final _maxAmountController = TextEditingController();
 
-  // Cached names for display
+  // Display names resolved lazily in build()
   String? _categoryName;
   String? _accountName;
 
@@ -320,88 +329,27 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
 
   void _showCategoryPicker() {
     final categoriesAsync = ref.read(allCategoriesProvider);
-    categoriesAsync.whenData((categories) {
-      final parents = categories.where((c) => c.parentId == null).toList();
-      showModalBottomSheet(
+    categoriesAsync.whenData((categories) async {
+      final result = await showCategoryPickerSheet(
         context: context,
-        isScrollControlled: true,
-        builder: (ctx) => DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (_, scrollController) => Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Filter by Category',
-                        style: Theme.of(ctx).textTheme.titleLarge),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _filters = _filters.copyWith(clearCategory: true);
-                          _categoryName = null;
-                        });
-                        Navigator.pop(ctx);
-                      },
-                      child: const Text('Clear'),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    for (final parent in parents) ...[
-                      ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              Color(parent.color).withValues(alpha: 0.15),
-                          child: Icon(Icons.category,
-                              color: Color(parent.color), size: 20),
-                        ),
-                        title: Text(parent.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
-                        selected: _filters.categoryId == parent.id,
-                        onTap: () {
-                          setState(() {
-                            _filters =
-                                _filters.copyWith(categoryId: parent.id);
-                            _categoryName = parent.name;
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      for (final child in categories
-                          .where((c) => c.parentId == parent.id))
-                        ListTile(
-                          contentPadding:
-                              const EdgeInsets.only(left: 56, right: 16),
-                          title: Text(child.name),
-                          selected: _filters.categoryId == child.id,
-                          onTap: () {
-                            setState(() {
-                              _filters =
-                                  _filters.copyWith(categoryId: child.id);
-                              _categoryName = child.name;
-                            });
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        categories: categories,
+        selectedCategoryId: _filters.categoryId,
+        title: 'Filter by Category',
       );
+
+      if (!mounted || result == null) return;
+
+      if (result.cleared) {
+        setState(() {
+          _filters = _filters.copyWith(clearCategory: true);
+          _categoryName = null;
+        });
+      } else {
+        setState(() {
+          _filters = _filters.copyWith(categoryId: result.id);
+          _categoryName = result.name;
+        });
+      }
     });
   }
 
@@ -494,18 +442,16 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Resolve names for display if we have IDs but no names yet
+    // Resolve display names reactively (handles async provider loading)
     if (_filters.categoryId != null && _categoryName == null) {
       ref.watch(allCategoriesProvider).whenData((cats) {
-        final cat =
-            cats.where((c) => c.id == _filters.categoryId).firstOrNull;
+        final cat = cats.where((c) => c.id == _filters.categoryId).firstOrNull;
         if (cat != null) _categoryName = cat.name;
       });
     }
     if (_filters.accountId != null && _accountName == null) {
       ref.watch(accountsProvider).whenData((accts) {
-        final acct =
-            accts.where((a) => a.id == _filters.accountId).firstOrNull;
+        final acct = accts.where((a) => a.id == _filters.accountId).firstOrNull;
         if (acct != null) _accountName = acct.name;
       });
     }
@@ -652,4 +598,3 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
     );
   }
 }
-

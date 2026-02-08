@@ -1,26 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:go_router/go_router.dart';
 
 import 'core/constants/app_constants.dart';
 import 'core/di/providers.dart';
-import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
-
-/// Provider for the current theme mode.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
-
-/// Provider for the app router (needs Ref for auth redirect logic).
-final appRouterProvider = Provider<GoRouter>((ref) {
-  return createAppRouter(ref);
-});
-
-/// Whether the app is currently unlocked (past the lock screen).
-final isUnlockedProvider = StateProvider<bool>((ref) => false);
-
-/// Tracks the last time the app was paused (backgrounded).
-final lastPausedAtProvider = StateProvider<DateTime?>((ref) => null);
+import 'core/theme/app_theme.dart';
 
 /// Root application widget.
 class PatrimoniumApp extends ConsumerWidget {

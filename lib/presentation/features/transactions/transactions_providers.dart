@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/providers.dart';
 import '../../../data/local/database/app_database.dart';
 
+// Re-export category providers so existing imports continue to work.
+export '../../../core/di/providers.dart'
+    show allCategoriesProvider, expenseCategoriesProvider, incomeCategoriesProvider;
+
 // =============================================================================
 // FILTER STATE
 // =============================================================================
@@ -140,11 +144,11 @@ final accountTransactionsProvider =
       .watchTransactionsForAccount(accountId);
 });
 
-/// Recent transactions for dashboard (last 10).
-final recentTransactionsProvider = FutureProvider.autoDispose<List<Transaction>>((ref) {
+/// Recent transactions for dashboard (last 10, reactive via stream).
+final recentTransactionsProvider = StreamProvider.autoDispose<List<Transaction>>((ref) {
   return ref
       .watch(transactionRepositoryProvider)
-      .getRecentTransactions(limit: 10);
+      .watchRecentTransactions(limit: 10);
 });
 
 /// Total income for current month.
@@ -172,25 +176,9 @@ final monthlyExpensesProvider = FutureProvider.autoDispose<int>((ref) {
 /// Search query state.
 final transactionSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// Uncategorized transaction count.
-final uncategorizedCountProvider = FutureProvider.autoDispose<int>((ref) async {
-  final transactions = await ref
+/// Uncategorized transaction count (uses count query, not full fetch).
+final uncategorizedCountProvider = FutureProvider.autoDispose<int>((ref) {
+  return ref
       .watch(transactionRepositoryProvider)
-      .getUncategorizedTransactions();
-  return transactions.length;
-});
-
-/// All categories for the category picker.
-final allCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
-  return ref.watch(categoryRepositoryProvider).watchAllCategories();
-});
-
-/// Expense categories only.
-final expenseCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
-  return ref.watch(categoryRepositoryProvider).watchExpenseCategories();
-});
-
-/// Income categories only.
-final incomeCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
-  return ref.watch(categoryRepositoryProvider).watchIncomeCategories();
+      .getUncategorizedCount();
 });
