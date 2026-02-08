@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/local/database/app_database.dart';
 import '../../data/local/secure_storage/secure_storage_service.dart';
@@ -10,6 +12,7 @@ import '../../domain/usecases/auth/biometric_service.dart';
 import '../../domain/usecases/auth/pin_service.dart';
 import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
+import '../router/app_router.dart';
 
 // =============================================================================
 // INFRASTRUCTURE PROVIDERS
@@ -89,7 +92,7 @@ final hasPinProvider = FutureProvider<bool>((ref) {
 
 /// Whether biometric auth is enabled in settings.
 final biometricEnabledProvider = FutureProvider<bool>((ref) {
-  return ref.watch(pinServiceProvider).isBiometricEnabled();
+  return ref.watch(biometricServiceProvider).isEnabled();
 });
 
 /// Whether biometric auth is available on this device.
@@ -100,4 +103,41 @@ final biometricAvailableProvider = FutureProvider<bool>((ref) {
 /// Current auto-lock timeout in seconds.
 final autoLockTimeoutProvider = FutureProvider<int>((ref) {
   return ref.watch(secureStorageProvider).getAutoLockTimeoutSeconds();
+});
+
+// =============================================================================
+// APP STATE PROVIDERS
+// =============================================================================
+
+/// Provider for the current theme mode.
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+
+/// Provider for the app router (needs Ref for auth redirect logic).
+final appRouterProvider = Provider<GoRouter>((ref) {
+  return createAppRouter(ref);
+});
+
+/// Whether the app is currently unlocked (past the lock screen).
+final isUnlockedProvider = StateProvider<bool>((ref) => false);
+
+/// Tracks the last time the app was paused (backgrounded).
+final lastPausedAtProvider = StateProvider<DateTime?>((ref) => null);
+
+// =============================================================================
+// CATEGORY STREAM PROVIDERS
+// =============================================================================
+
+/// All categories (used by category pickers and lookups across features).
+final allCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
+  return ref.watch(categoryRepositoryProvider).watchAllCategories();
+});
+
+/// Expense categories only.
+final expenseCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
+  return ref.watch(categoryRepositoryProvider).watchExpenseCategories();
+});
+
+/// Income categories only.
+final incomeCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
+  return ref.watch(categoryRepositoryProvider).watchIncomeCategories();
 });

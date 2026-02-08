@@ -136,6 +136,15 @@ class LLMError extends AppError {
       );
 }
 
+/// Unexpected errors that don't fit a specific category.
+class UnexpectedError extends AppError {
+  const UnexpectedError({
+    required super.message,
+    super.technicalDetails,
+    super.originalError,
+  });
+}
+
 /// Import/export errors.
 class ImportError extends AppError {
   final int? failedRow;
@@ -185,7 +194,7 @@ class ErrorHandler {
     }
 
     // Fallback
-    return NetworkError(
+    return UnexpectedError(
       message: 'An unexpected error occurred. Please try again.',
       technicalDetails: message,
       originalError: error,

@@ -88,7 +88,7 @@ Material 3 with `dynamic_color` support. Custom `FinanceColors` theme extension 
 - **Targets**: Android + Linux desktop only. `dart:ffi` dependency means web builds fail.
 - **Flutter 3.38+**: `DropdownButtonFormField` uses `initialValue` (not deprecated `value` parameter).
 - **Category seeding**: `CategorySeeder` runs on first launch in `main.dart`, populating 16 expense + 7 income parent categories with subcategories.
-- **Account types**: 18 types defined in `accounts_providers.dart` with `AccountTypeInfo` metadata and `accountTypeGroups` for UI grouping.
+- **Account types**: 18 types defined in `core/constants/account_types.dart` with `AccountTypeInfo` metadata and `accountTypeGroups` for UI grouping (re-exported from `accounts_providers.dart`).
 - **Expenses stored as negative cents**: Income is positive, expenses are negative in `amountCents`.
 
 ## Current Status
