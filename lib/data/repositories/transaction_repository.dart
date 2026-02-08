@@ -1,0 +1,189 @@
+import 'package:drift/drift.dart';
+
+import '../local/database/app_database.dart';
+
+/// Repository for transaction CRUD and query operations.
+class TransactionRepository {
+  TransactionRepository(this._db);
+
+  final AppDatabase _db;
+
+  /// Watch all transactions ordered by date descending.
+  Stream<List<Transaction>> watchAllTransactions({int? limit}) {
+    final query = _db.select(_db.transactions)
+      ..orderBy([(t) => OrderingTerm.desc(t.date)]);
+    if (limit != null) {
+      query.limit(limit);
+    }
+    return query.watch();
+  }
+
+  /// Watch transactions for a specific account.
+  Stream<List<Transaction>> watchTransactionsForAccount(String accountId) {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.accountId.equals(accountId))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .watch();
+  }
+
+  /// Get transactions by date range.
+  Future<List<Transaction>> getTransactionsByDateRange(
+    int startDate,
+    int endDate, {
+    String? accountId,
+    String? categoryId,
+  }) {
+    final query = _db.select(_db.transactions)
+      ..where((t) =>
+          t.date.isBiggerOrEqualValue(startDate) &
+          t.date.isSmallerOrEqualValue(endDate));
+
+    if (accountId != null) {
+      query.where((t) => t.accountId.equals(accountId));
+    }
+    if (categoryId != null) {
+      query.where((t) => t.categoryId.equals(categoryId));
+    }
+
+    query.orderBy([(t) => OrderingTerm.desc(t.date)]);
+    return query.get();
+  }
+
+  /// Get all transactions (one-shot, most recent first).
+  Future<List<Transaction>> getAllTransactions() {
+    return (_db.select(_db.transactions)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+  }
+
+  /// Get a single transaction by ID.
+  Future<Transaction?> getTransactionById(String id) {
+    return (_db.select(_db.transactions)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  /// Search transactions by payee name.
+  Future<List<Transaction>> searchByPayee(String query) {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.payee.contains(query))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(50))
+        .get();
+  }
+
+  /// Get recent transactions (last N).
+  Future<List<Transaction>> getRecentTransactions({int limit = 10}) {
+    return (_db.select(_db.transactions)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(limit))
+        .get();
+  }
+
+  /// Watch recent transactions.
+  Stream<List<Transaction>> watchRecentTransactions({int limit = 10}) {
+    return (_db.select(_db.transactions)
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(limit))
+        .watch();
+  }
+
+  /// Get uncategorized transactions.
+  Future<List<Transaction>> getUncategorizedTransactions() {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.categoryId.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+  }
+
+  /// Get unreviewed transactions.
+  Future<List<Transaction>> getUnreviewedTransactions() {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.isReviewed.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)]))
+        .get();
+  }
+
+  /// Get total income for a date range.
+  Future<int> getTotalIncome(int startDate, int endDate) async {
+    final result = await (_db.selectOnly(_db.transactions)
+          ..where(_db.transactions.amountCents.isBiggerOrEqualValue(0) &
+              _db.transactions.date.isBiggerOrEqualValue(startDate) &
+              _db.transactions.date.isSmallerOrEqualValue(endDate))
+          ..addColumns([_db.transactions.amountCents.sum()]))
+        .getSingle();
+    return result.read(_db.transactions.amountCents.sum()) ?? 0;
+  }
+
+  /// Get total expenses for a date range.
+  Future<int> getTotalExpenses(int startDate, int endDate) async {
+    final result = await (_db.selectOnly(_db.transactions)
+          ..where(_db.transactions.amountCents.isSmallerThanValue(0) &
+              _db.transactions.date.isBiggerOrEqualValue(startDate) &
+              _db.transactions.date.isSmallerOrEqualValue(endDate))
+          ..addColumns([_db.transactions.amountCents.sum()]))
+        .getSingle();
+    return result.read(_db.transactions.amountCents.sum()) ?? 0;
+  }
+
+  /// Insert a new transaction.
+  Future<void> insertTransaction(TransactionsCompanion transaction) {
+    return _db.into(_db.transactions).insert(transaction);
+  }
+
+  /// Insert multiple transactions (batch import).
+  Future<void> insertTransactions(List<TransactionsCompanion> transactions) {
+    return _db.batch((batch) {
+      batch.insertAll(_db.transactions, transactions);
+    });
+  }
+
+  /// Update an existing transaction.
+  Future<bool> updateTransaction(TransactionsCompanion transaction) {
+    return (_db.update(_db.transactions)
+          ..where((t) => t.id.equals(transaction.id.value)))
+        .write(transaction)
+        .then((rows) => rows > 0);
+  }
+
+  /// Update category for a transaction.
+  Future<void> updateCategory(String transactionId, String categoryId) {
+    return (_db.update(_db.transactions)
+          ..where((t) => t.id.equals(transactionId)))
+        .write(TransactionsCompanion(
+      categoryId: Value(categoryId),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
+
+  /// Mark transaction as reviewed.
+  Future<void> markReviewed(String id, {bool reviewed = true}) {
+    return (_db.update(_db.transactions)..where((t) => t.id.equals(id)))
+        .write(TransactionsCompanion(
+      isReviewed: Value(reviewed),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
+
+  /// Delete a transaction by ID.
+  Future<int> deleteTransaction(String id) {
+    return (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
+  }
+
+  /// Check for duplicate by external ID.
+  Future<bool> existsByExternalId(String externalId) async {
+    final result = await (_db.select(_db.transactions)
+          ..where((t) => t.externalId.equals(externalId))
+          ..limit(1))
+        .get();
+    return result.isNotEmpty;
+  }
+
+  /// Get transaction count.
+  Future<int> getTransactionCount() async {
+    final count = _db.transactions.id.count();
+    final result = await (_db.selectOnly(_db.transactions)
+          ..addColumns([count]))
+        .getSingle();
+    return result.read(count) ?? 0;
+  }
+}
