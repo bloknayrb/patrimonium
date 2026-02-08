@@ -9,6 +9,7 @@ import '../../data/repositories/budget_repository.dart';
 import '../../domain/usecases/auth/biometric_service.dart';
 import '../../domain/usecases/auth/pin_service.dart';
 import '../../domain/usecases/categories/category_seeder.dart';
+import '../../domain/usecases/export/csv_export_service.dart';
 
 // =============================================================================
 // INFRASTRUCTURE PROVIDERS
@@ -47,6 +48,18 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 
 final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
   return BudgetRepository(ref.watch(databaseProvider));
+});
+
+// =============================================================================
+// EXPORT
+// =============================================================================
+
+final csvExportServiceProvider = Provider<CsvExportService>((ref) {
+  return CsvExportService(
+    accountRepo: ref.watch(accountRepositoryProvider),
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    categoryRepo: ref.watch(categoryRepositoryProvider),
+  );
 });
 
 // =============================================================================

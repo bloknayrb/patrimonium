@@ -157,11 +157,9 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.file_download),
             title: const Text('Export Data'),
-            subtitle: const Text('Export to CSV or JSON'),
+            subtitle: const Text('Export accounts & transactions to CSV'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Navigate to export
-            },
+            onTap: () => _exportData(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.sync),
@@ -206,6 +204,44 @@ class SettingsScreen extends ConsumerWidget {
     final minutes = seconds ~/ 60;
     if (minutes == 1) return '1 minute';
     return '$minutes minutes';
+  }
+
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final exportService = ref.read(csvExportServiceProvider);
+
+    // Show a loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final exportDir = await exportService.exportAll();
+      if (context.mounted) {
+        Navigator.of(context).pop(); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported to: $exportDir'),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showTimeoutPicker(BuildContext context, WidgetRef ref, int current) {
