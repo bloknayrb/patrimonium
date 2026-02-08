@@ -4,37 +4,37 @@ import '../../../core/di/providers.dart';
 import '../../../data/local/database/app_database.dart';
 
 /// Watch all visible accounts.
-final accountsProvider = StreamProvider<List<Account>>((ref) {
+final accountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
   return ref.watch(accountRepositoryProvider).watchAllAccounts();
 });
 
 /// Watch all accounts including hidden.
-final allAccountsProvider = StreamProvider<List<Account>>((ref) {
+final allAccountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
   return ref.watch(accountRepositoryProvider).watchAllAccountsIncludingHidden();
 });
 
 /// Watch accounts grouped by type.
-final accountsByTypeProvider = FutureProvider<Map<String, List<Account>>>((ref) {
+final accountsByTypeProvider = FutureProvider.autoDispose<Map<String, List<Account>>>((ref) {
   return ref.watch(accountRepositoryProvider).getAccountsByType();
 });
 
 /// Watch net worth.
-final netWorthProvider = StreamProvider<int>((ref) {
+final netWorthProvider = StreamProvider.autoDispose<int>((ref) {
   return ref.watch(accountRepositoryProvider).watchNetWorth();
 });
 
 /// Watch total assets.
-final totalAssetsProvider = FutureProvider<int>((ref) {
+final totalAssetsProvider = FutureProvider.autoDispose<int>((ref) {
   return ref.watch(accountRepositoryProvider).getTotalAssets();
 });
 
 /// Watch total liabilities.
-final totalLiabilitiesProvider = FutureProvider<int>((ref) {
+final totalLiabilitiesProvider = FutureProvider.autoDispose<int>((ref) {
   return ref.watch(accountRepositoryProvider).getTotalLiabilities();
 });
 
 /// Watch a single account by ID.
-final accountByIdProvider = StreamProvider.family<Account?, String>((ref, id) {
+final accountByIdProvider = StreamProvider.autoDispose.family<Account?, String>((ref, id) {
   return ref.watch(accountRepositoryProvider).watchAccountById(id);
 });
 
