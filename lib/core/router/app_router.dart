@@ -6,6 +6,7 @@ import '../../presentation/features/auth/lock_screen.dart';
 import '../../presentation/features/auth/pin_setup_screen.dart';
 import '../../presentation/features/dashboard/dashboard_screen.dart';
 import '../../presentation/features/accounts/accounts_screen.dart';
+import '../../presentation/features/onboarding/onboarding_screen.dart';
 import '../../presentation/features/transactions/transactions_screen.dart';
 import '../../presentation/features/ai_assistant/ai_assistant_screen.dart';
 import '../../presentation/features/settings/settings_screen.dart';
@@ -80,6 +81,13 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.pinChange,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const PinSetupScreen(isChange: true),
+      ),
+
+      // Onboarding (first launch)
+      GoRoute(
+        path: AppRoutes.onboarding,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
       // Main app with bottom navigation

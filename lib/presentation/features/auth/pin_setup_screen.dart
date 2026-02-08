@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/router/app_router.dart';
+import '../../shared/widgets/pin_number_pad.dart';
 
 /// PIN setup screen for initial configuration or PIN change.
 class PinSetupScreen extends ConsumerStatefulWidget {
@@ -151,10 +153,19 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       // PIN change flow: pop back to settings
       Navigator.of(context).pop(true);
     } else {
-      // First-time setup: go to dashboard
-      // Invalidate hasPinProvider so redirect logic sees the new PIN
+      // First-time setup: check if user has accounts
       ref.invalidate(hasPinProvider);
-      context.go(AppRoutes.dashboard);
+      ref.read(isUnlockedProvider.notifier).state = true;
+
+      // If no accounts exist, show onboarding; otherwise go to dashboard
+      final accountCount = await ref.read(accountRepositoryProvider).getAccountCount();
+      if (!mounted) return;
+
+      if (accountCount == 0) {
+        context.go(AppRoutes.onboarding);
+      } else {
+        context.go(AppRoutes.dashboard);
+      }
     }
   }
 
@@ -286,7 +297,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
               const Spacer(),
 
               // Number pad
-              _SetupNumberPad(
+              PinNumberPad(
                 onDigit: _addDigit,
                 onDelete: _removeDigit,
                 isDisabled: _isProcessing,
@@ -312,80 +323,3 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 }
 
-class _SetupNumberPad extends StatelessWidget {
-  final ValueChanged<String> onDigit;
-  final VoidCallback onDelete;
-  final bool isDisabled;
-
-  const _SetupNumberPad({
-    required this.onDigit,
-    required this.onDelete,
-    this.isDisabled = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        for (final row in [
-          ['1', '2', '3'],
-          ['4', '5', '6'],
-          ['7', '8', '9'],
-          ['', '0', 'del'],
-        ]) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: row.map((v) {
-              if (v.isEmpty) return const SizedBox(width: 72, height: 72);
-              if (v == 'del') {
-                return _buildButton(
-                  context,
-                  icon: Icons.backspace_outlined,
-                  onTap: onDelete,
-                );
-              }
-              return _buildButton(context, digit: v, onTap: () => onDigit(v));
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildButton(
-    BuildContext context, {
-    String? digit,
-    IconData? icon,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: 72,
-      height: 72,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: isDisabled ? null : () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
-          child: Center(
-            child: digit != null
-                ? Text(digit, style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isDisabled
-                        ? theme.colorScheme.onSurface.withValues(alpha: 0.38)
-                        : null,
-                  ))
-                : Icon(icon, size: 28, color: isDisabled
-                    ? theme.colorScheme.onSurface.withValues(alpha: 0.38)
-                    : null),
-          ),
-        ),
-      ),
-    );
-  }
-}
