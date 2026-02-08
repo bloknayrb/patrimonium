@@ -1,0 +1,270 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/di/providers.dart';
+import '../../../core/router/app_router.dart';
+
+/// Settings screen with app configuration sections.
+class SettingsScreen extends ConsumerWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final biometricAvailable = ref.watch(biometricAvailableProvider);
+    final biometricEnabled = ref.watch(biometricEnabledProvider);
+    final autoLockTimeout = ref.watch(autoLockTimeoutProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+      ),
+      body: ListView(
+        children: [
+          // AI Configuration
+          const _SectionHeader(title: 'AI Assistant'),
+          ListTile(
+            leading: const Icon(Icons.smart_toy),
+            title: const Text('LLM Provider'),
+            subtitle: const Text('Configure Claude, OpenAI, or Ollama'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to LLM configuration
+            },
+          ),
+
+          const Divider(),
+
+          // Bank Connections
+          const _SectionHeader(title: 'Bank Connections'),
+          ListTile(
+            leading: const Icon(Icons.account_balance),
+            title: const Text('Connected Accounts'),
+            subtitle: const Text('Manage bank connections'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to bank connections
+            },
+          ),
+
+          const Divider(),
+
+          // Categories
+          const _SectionHeader(title: 'Categories & Rules'),
+          ListTile(
+            leading: const Icon(Icons.category),
+            title: const Text('Categories'),
+            subtitle: const Text('Manage income and expense categories'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to categories management
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.rule),
+            title: const Text('Auto-Categorization Rules'),
+            subtitle: const Text('Rules for automatic transaction categorization'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to rules management
+            },
+          ),
+
+          const Divider(),
+
+          // Security
+          const _SectionHeader(title: 'Security'),
+
+          // Biometric toggle - only show if device supports it
+          if (biometricAvailable.valueOrNull == true)
+            ListTile(
+              leading: const Icon(Icons.fingerprint),
+              title: const Text('Biometric Authentication'),
+              subtitle: const Text('Use fingerprint or face to unlock'),
+              trailing: Switch(
+                value: biometricEnabled.valueOrNull ?? false,
+                onChanged: (value) async {
+                  final biometricService = ref.read(biometricServiceProvider);
+                  await biometricService.setEnabled(value);
+                  ref.invalidate(biometricEnabledProvider);
+                },
+              ),
+            ),
+
+          ListTile(
+            leading: const Icon(Icons.pin),
+            title: const Text('Change PIN'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push(AppRoutes.pinChange);
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.timer),
+            title: const Text('Auto-Lock Timeout'),
+            subtitle: Text(_formatTimeout(autoLockTimeout.valueOrNull ?? 300)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showTimeoutPicker(context, ref,
+                autoLockTimeout.valueOrNull ?? 300),
+          ),
+
+          const Divider(),
+
+          // Appearance
+          const _SectionHeader(title: 'Appearance'),
+          ListTile(
+            leading: const Icon(Icons.brightness_6),
+            title: const Text('Theme'),
+            trailing: SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: Icon(Icons.brightness_auto),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode),
+                ),
+              ],
+              selected: {themeMode},
+              onSelectionChanged: (modes) {
+                ref.read(themeModeProvider.notifier).state = modes.first;
+              },
+            ),
+          ),
+
+          const Divider(),
+
+          // Data
+          const _SectionHeader(title: 'Data'),
+          ListTile(
+            leading: const Icon(Icons.file_upload),
+            title: const Text('Import Data'),
+            subtitle: const Text('CSV, Mint, YNAB, Monarch'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to import
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_download),
+            title: const Text('Export Data'),
+            subtitle: const Text('Export to CSV or JSON'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to export
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.sync),
+            title: const Text('Cloud Sync'),
+            subtitle: const Text('Supabase backup'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to sync settings
+            },
+          ),
+
+          const Divider(),
+
+          // About
+          const _SectionHeader(title: 'About'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text(AppConstants.appName),
+            subtitle: Text('Version ${AppConstants.appVersion}'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.description),
+            title: const Text('Licenses'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: AppConstants.appName,
+                applicationVersion: AppConstants.appVersion,
+              );
+            },
+          ),
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  String _formatTimeout(int seconds) {
+    if (seconds < 60) return '$seconds seconds';
+    final minutes = seconds ~/ 60;
+    if (minutes == 1) return '1 minute';
+    return '$minutes minutes';
+  }
+
+  void _showTimeoutPicker(BuildContext context, WidgetRef ref, int current) {
+    final options = [
+      (30, '30 seconds'),
+      (60, '1 minute'),
+      (120, '2 minutes'),
+      (300, '5 minutes'),
+      (600, '10 minutes'),
+      (900, '15 minutes'),
+      (1800, '30 minutes'),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Auto-Lock Timeout'),
+        children: options.map((option) {
+          final (seconds, label) = option;
+          return SimpleDialogOption(
+            onPressed: () async {
+              final storage = ref.read(secureStorageProvider);
+              await storage.setAutoLockTimeoutSeconds(seconds);
+              ref.invalidate(autoLockTimeoutProvider);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: Row(
+              children: [
+                if (seconds == current)
+                  Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                else
+                  const SizedBox(width: 24),
+                const SizedBox(width: 12),
+                Text(label),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
