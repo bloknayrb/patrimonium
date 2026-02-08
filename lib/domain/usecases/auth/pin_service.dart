@@ -62,15 +62,6 @@ class PinService {
   /// Remove PIN (used for reset).
   Future<void> clearPin() => _storage.clearPin();
 
-  // ─── Biometric ────────────────────────────────────────────────────
-
-  /// Check if biometric auth is enabled.
-  Future<bool> isBiometricEnabled() => _storage.isBiometricEnabled();
-
-  /// Enable or disable biometric authentication.
-  Future<void> setBiometricEnabled(bool enabled) =>
-      _storage.setBiometricEnabled(enabled);
-
   // ─── PBKDF2 Implementation ────────────────────────────────────────
 
   /// Generate a cryptographically secure random salt.

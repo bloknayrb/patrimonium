@@ -8,6 +8,7 @@ import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
+import '../../shared/widgets/category_picker_sheet.dart';
 import '../accounts/accounts_providers.dart';
 import 'transactions_providers.dart';
 
@@ -81,97 +82,26 @@ class _AddEditTransactionScreenState
         ? ref.read(expenseCategoriesProvider)
         : ref.read(incomeCategoriesProvider);
 
-    categoriesAsync.whenData((categories) {
-      // Build hierarchical list
-      final parents = categories.where((c) => c.parentId == null).toList();
-
-      showModalBottomSheet(
+    categoriesAsync.whenData((categories) async {
+      final result = await showCategoryPickerSheet(
         context: context,
-        isScrollControlled: true,
-        builder: (ctx) => DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (_, scrollController) => Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Select Category',
-                      style: Theme.of(ctx).textTheme.titleLarge,
-                    ),
-                    if (_selectedCategoryId != null)
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _selectedCategoryId = null;
-                            _selectedCategoryName = null;
-                          });
-                          Navigator.pop(ctx);
-                        },
-                        child: const Text('Clear'),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    for (final parent in parents) ...[
-                      // Parent category
-                      ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              Color(parent.color).withValues(alpha: 0.15),
-                          child: Icon(
-                            Icons.category,
-                            color: Color(parent.color),
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          parent.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        selected: _selectedCategoryId == parent.id,
-                        onTap: () {
-                          setState(() {
-                            _selectedCategoryId = parent.id;
-                            _selectedCategoryName = parent.name;
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      // Child categories
-                      for (final child in categories
-                          .where((c) => c.parentId == parent.id))
-                        ListTile(
-                          contentPadding:
-                              const EdgeInsets.only(left: 56, right: 16),
-                          title: Text(child.name),
-                          selected: _selectedCategoryId == child.id,
-                          onTap: () {
-                            setState(() {
-                              _selectedCategoryId = child.id;
-                              _selectedCategoryName = child.name;
-                            });
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        categories: categories,
+        selectedCategoryId: _selectedCategoryId,
       );
+
+      if (!mounted) return;
+
+      if (result == null) {
+        setState(() {
+          _selectedCategoryId = null;
+          _selectedCategoryName = null;
+        });
+      } else {
+        setState(() {
+          _selectedCategoryId = result.id;
+          _selectedCategoryName = result.name;
+        });
+      }
     });
   }
 
