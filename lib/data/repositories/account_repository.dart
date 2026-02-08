@@ -133,9 +133,16 @@ class AccountRepository {
     ));
   }
 
-  /// Delete an account by ID.
-  Future<int> deleteAccount(String id) {
-    return (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
+  /// Delete an account and all its associated transactions.
+  Future<void> deleteAccount(String id) async {
+    await _db.transaction(() async {
+      // Delete all transactions belonging to this account first
+      await (_db.delete(_db.transactions)
+            ..where((t) => t.accountId.equals(id)))
+          .go();
+      // Then delete the account itself
+      await (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
+    });
   }
 
   /// Get count of accounts.

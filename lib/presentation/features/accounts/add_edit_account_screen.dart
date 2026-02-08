@@ -117,7 +117,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Account'),
         content: Text(
-          'Delete "${widget.account!.name}"? All transactions in this account will be orphaned.',
+          'Delete "${widget.account!.name}"? All transactions in this account will also be permanently deleted.',
         ),
         actions: [
           TextButton(

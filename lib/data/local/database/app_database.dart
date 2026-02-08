@@ -403,11 +403,21 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          // Future migrations go here.
-          // Example:
+          // Migration strategy: increment schemaVersion above, then add
+          // sequential `if (from < N)` blocks below. Each block handles
+          // the migration from version N-1 to N.
+          //
+          // Example for future schema version 2:
           // if (from < 2) {
           //   await m.addColumn(accounts, accounts.someNewColumn);
           // }
+          //
+          // Migrations are cumulative — a user upgrading from v1 to v3
+          // will run both the v2 and v3 blocks in order.
+        },
+        beforeOpen: (details) async {
+          // Enable foreign key enforcement for all connections.
+          await customStatement('PRAGMA foreign_keys = ON');
         },
       );
 
