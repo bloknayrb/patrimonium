@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/money_extensions.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
+import '../../shared/loading/shimmer_loading.dart';
+import '../accounts/accounts_providers.dart';
 import 'add_edit_transaction_screen.dart';
 import 'transactions_providers.dart';
 
@@ -58,15 +62,21 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filter',
-            onPressed: () => _showFilterSheet(context),
-          ),
+          Builder(builder: (context) {
+            final hasFilters = ref.watch(transactionFiltersProvider).hasAny;
+            return IconButton(
+              icon: Badge(
+                isLabelVisible: hasFilters,
+                child: const Icon(Icons.filter_list),
+              ),
+              tooltip: 'Filter',
+              onPressed: () => _showFilterSheet(context),
+            );
+          }),
         ],
       ),
       body: transactionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const ShimmerTransactionList(),
         error: (error, _) => Center(child: Text('Error: $error')),
         data: (transactions) {
           if (transactions.isEmpty) {
@@ -173,6 +183,7 @@ class _TransactionTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final finance = theme.finance;
     final isIncome = transaction.amountCents > 0;
     final categoriesAsync = ref.watch(allCategoriesProvider);
 
@@ -188,11 +199,11 @@ class _TransactionTile extends ConsumerWidget {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: isIncome
-            ? Colors.green.withValues(alpha: 0.15)
+            ? finance.income.withValues(alpha: 0.15)
             : colorScheme.errorContainer,
         child: Icon(
           isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-          color: isIncome ? Colors.green : colorScheme.error,
+          color: isIncome ? finance.income : colorScheme.error,
           size: 20,
         ),
       ),
@@ -220,7 +231,7 @@ class _TransactionTile extends ConsumerWidget {
             transaction.amountCents.toCurrency(),
             style: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w600,
-              color: isIncome ? Colors.green : colorScheme.onSurface,
+              color: isIncome ? finance.income : colorScheme.onSurface,
             ),
           ),
           if (transaction.isPending)
@@ -234,71 +245,404 @@ class _TransactionTile extends ConsumerWidget {
         ],
       ),
       onTap: () {
-        // TODO: Navigate to transaction detail/edit
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AddEditTransactionScreen(transaction: transaction),
+          ),
+        );
       },
     );
   }
 }
 
-class _FilterBottomSheet extends StatelessWidget {
+class _FilterBottomSheet extends ConsumerStatefulWidget {
   const _FilterBottomSheet();
+
+  @override
+  ConsumerState<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
+  late TransactionFilters _filters;
+  final _minAmountController = TextEditingController();
+  final _maxAmountController = TextEditingController();
+
+  // Cached names for display
+  String? _categoryName;
+  String? _accountName;
+
+  @override
+  void initState() {
+    super.initState();
+    _filters = ref.read(transactionFiltersProvider);
+    if (_filters.minAmountCents != null) {
+      _minAmountController.text = _filters.minAmountCents!.toCurrencyValue();
+    }
+    if (_filters.maxAmountCents != null) {
+      _maxAmountController.text = _filters.maxAmountCents!.toCurrencyValue();
+    }
+  }
+
+  @override
+  void dispose() {
+    _minAmountController.dispose();
+    _maxAmountController.dispose();
+    super.dispose();
+  }
+
+  String _dateRangeLabel() {
+    if (_filters.startDate == null && _filters.endDate == null) return 'All time';
+    if (_filters.startDate != null && _filters.endDate != null) {
+      return '${_filters.startDate!.toMediumDate()} - ${_filters.endDate!.toMediumDate()}';
+    }
+    if (_filters.startDate != null) return 'From ${_filters.startDate!.toMediumDate()}';
+    return 'Until ${_filters.endDate!.toMediumDate()}';
+  }
+
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDateRange: _filters.startDate != null && _filters.endDate != null
+          ? DateTimeRange(start: _filters.startDate!, end: _filters.endDate!)
+          : null,
+    );
+    if (picked != null) {
+      setState(() {
+        _filters = _filters.copyWith(
+          startDate: picked.start,
+          endDate: picked.end,
+        );
+      });
+    }
+  }
+
+  void _showCategoryPicker() {
+    final categoriesAsync = ref.read(allCategoriesProvider);
+    categoriesAsync.whenData((categories) {
+      final parents = categories.where((c) => c.parentId == null).toList();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Filter by Category',
+                        style: Theme.of(ctx).textTheme.titleLarge),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _filters = _filters.copyWith(clearCategory: true);
+                          _categoryName = null;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    for (final parent in parents) ...[
+                      ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Color(parent.color).withValues(alpha: 0.15),
+                          child: Icon(Icons.category,
+                              color: Color(parent.color), size: 20),
+                        ),
+                        title: Text(parent.name,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        selected: _filters.categoryId == parent.id,
+                        onTap: () {
+                          setState(() {
+                            _filters =
+                                _filters.copyWith(categoryId: parent.id);
+                            _categoryName = parent.name;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      for (final child in categories
+                          .where((c) => c.parentId == parent.id))
+                        ListTile(
+                          contentPadding:
+                              const EdgeInsets.only(left: 56, right: 16),
+                          title: Text(child.name),
+                          selected: _filters.categoryId == child.id,
+                          onTap: () {
+                            setState(() {
+                              _filters =
+                                  _filters.copyWith(categoryId: child.id);
+                              _categoryName = child.name;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  void _showAccountPicker() {
+    final accountsAsync = ref.read(accountsProvider);
+    accountsAsync.whenData((accounts) {
+      showModalBottomSheet(
+        context: context,
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Filter by Account',
+                      style: Theme.of(ctx).textTheme.titleLarge),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _filters = _filters.copyWith(clearAccount: true);
+                        _accountName = null;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              for (final account in accounts)
+                ListTile(
+                  leading: const Icon(Icons.account_balance),
+                  title: Text(account.name),
+                  subtitle: Text(account.balanceCents.toCurrency()),
+                  selected: _filters.accountId == account.id,
+                  onTap: () {
+                    setState(() {
+                      _filters =
+                          _filters.copyWith(accountId: account.id);
+                      _accountName = account.name;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  void _applyFilters() {
+    // Parse amount fields
+    final minText = _minAmountController.text.trim();
+    final maxText = _maxAmountController.text.trim();
+
+    var updatedFilters = _filters;
+    if (minText.isNotEmpty) {
+      final cents = minText.toCents();
+      if (cents != null) {
+        updatedFilters = updatedFilters.copyWith(minAmountCents: cents);
+      }
+    } else {
+      updatedFilters = updatedFilters.copyWith(clearMinAmount: true);
+    }
+
+    if (maxText.isNotEmpty) {
+      final cents = maxText.toCents();
+      if (cents != null) {
+        updatedFilters = updatedFilters.copyWith(maxAmountCents: cents);
+      }
+    } else {
+      updatedFilters = updatedFilters.copyWith(clearMaxAmount: true);
+    }
+
+    ref.read(transactionFiltersProvider.notifier).state = updatedFilters;
+    Navigator.pop(context);
+  }
+
+  void _clearAll() {
+    ref.read(transactionFiltersProvider.notifier).state =
+        TransactionFilters.empty;
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Resolve names for display if we have IDs but no names yet
+    if (_filters.categoryId != null && _categoryName == null) {
+      ref.watch(allCategoriesProvider).whenData((cats) {
+        final cat =
+            cats.where((c) => c.id == _filters.categoryId).firstOrNull;
+        if (cat != null) _categoryName = cat.name;
+      });
+    }
+    if (_filters.accountId != null && _accountName == null) {
+      ref.watch(accountsProvider).whenData((accts) {
+        final acct =
+            accts.where((a) => a.id == _filters.accountId).firstOrNull;
+        if (acct != null) _accountName = acct.name;
+      });
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Filters', style: theme.textTheme.titleLarge),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Filters', style: theme.textTheme.titleLarge),
+              if (_filters.hasAny)
+                TextButton(
+                  onPressed: _clearAll,
+                  child: const Text('Clear All'),
+                ),
+            ],
+          ),
           const SizedBox(height: 16),
           // Date range
           ListTile(
             leading: const Icon(Icons.date_range),
             title: const Text('Date Range'),
-            subtitle: const Text('All time'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Date range picker
-            },
+            subtitle: Text(_dateRangeLabel()),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_filters.startDate != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() {
+                      _filters = _filters.copyWith(
+                        clearStartDate: true,
+                        clearEndDate: true,
+                      );
+                    }),
+                  ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: _pickDateRange,
           ),
           // Category
           ListTile(
             leading: const Icon(Icons.category),
             title: const Text('Category'),
-            subtitle: const Text('All categories'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Category filter
-            },
+            subtitle: Text(_categoryName ?? 'All categories'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_filters.categoryId != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() {
+                      _filters = _filters.copyWith(clearCategory: true);
+                      _categoryName = null;
+                    }),
+                  ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: _showCategoryPicker,
           ),
           // Account
           ListTile(
             leading: const Icon(Icons.account_balance),
             title: const Text('Account'),
-            subtitle: const Text('All accounts'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Account filter
-            },
+            subtitle: Text(_accountName ?? 'All accounts'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_filters.accountId != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() {
+                      _filters = _filters.copyWith(clearAccount: true);
+                      _accountName = null;
+                    }),
+                  ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: _showAccountPicker,
           ),
           // Amount range
-          ListTile(
-            leading: const Icon(Icons.attach_money),
-            title: const Text('Amount Range'),
-            subtitle: const Text('Any amount'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO: Amount range filter
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.attach_money),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _minAmountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Min',
+                      hintText: '0.00',
+                      prefixText: '\$ ',
+                      isDense: true,
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text('to'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _maxAmountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Max',
+                      hintText: '0.00',
+                      prefixText: '\$ ',
+                      isDense: true,
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: _applyFilters,
               child: const Text('Apply Filters'),
             ),
           ),

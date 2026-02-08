@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
+import '../../shared/loading/shimmer_loading.dart';
+import 'account_detail_screen.dart';
 import 'accounts_providers.dart';
 import 'add_edit_account_screen.dart';
 
@@ -27,7 +29,7 @@ class AccountsScreen extends ConsumerWidget {
         ],
       ),
       body: accountsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const ShimmerTransactionList(itemCount: 5),
         error: (error, _) => Center(child: Text('Error: $error')),
         data: (accounts) {
           if (accounts.isEmpty) {
@@ -145,7 +147,7 @@ class _NetWorthHeader extends StatelessWidget {
               netWorthAsync.when(
                 data: (v) => v.toCurrency(),
                 loading: () => '...',
-                error: (_, __) => '--',
+                error: (_, _) => '--',
               ),
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
@@ -278,7 +280,11 @@ class _AccountTile extends StatelessWidget {
         ),
       ),
       onTap: () {
-        // TODO: Navigate to account detail
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AccountDetailScreen(accountId: account.id),
+          ),
+        );
       },
     );
   }

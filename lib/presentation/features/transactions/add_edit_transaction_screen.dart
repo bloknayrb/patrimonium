@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
 import '../accounts/accounts_providers.dart';
 import 'transactions_providers.dart';
@@ -379,7 +380,7 @@ class _AddEditTransactionScreenState
                 filled: true,
                 suffixIcon: Icon(
                   _isExpense ? Icons.remove_circle_outline : Icons.add_circle_outline,
-                  color: _isExpense ? colorScheme.error : Colors.green,
+                  color: _isExpense ? colorScheme.error : theme.finance.income,
                 ),
               ),
               keyboardType:
@@ -414,7 +415,7 @@ class _AddEditTransactionScreenState
                 leading: Icon(Icons.account_balance),
                 title: Text('Loading accounts...'),
               ),
-              error: (_, __) => const ListTile(
+              error: (_, _) => const ListTile(
                 leading: Icon(Icons.error),
                 title: Text('Error loading accounts'),
               ),
