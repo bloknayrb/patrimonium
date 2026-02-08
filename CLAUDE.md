@@ -61,6 +61,17 @@ For multi-step tasks, state a brief plan:
 3. [Step] → verify: [check]
 ```
 
+### Anti-Patterns to Avoid
+
+| Principle | Anti-Pattern | Fix |
+|-----------|-------------|-----|
+| Think Before Coding | Silently assumes file format, fields, scope | List assumptions explicitly, ask for clarification |
+| Simplicity First | Strategy pattern for single calculation | One function until complexity is actually needed |
+| Surgical Changes | Reformats quotes, adds type hints while fixing a bug | Only change lines that fix the reported issue |
+| Goal-Driven | "I'll review and improve the code" | "Write test for bug X → make it pass → verify no regressions" |
+
+"Overcomplicated" code isn't obviously wrong — it follows design patterns and best practices. The problem is **timing**: adding complexity before it's needed makes code harder to understand, introduces more bugs, takes longer to implement, and is harder to test. Good code solves today's problem simply, not tomorrow's problem prematurely.
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
 ## Build & Development Commands
