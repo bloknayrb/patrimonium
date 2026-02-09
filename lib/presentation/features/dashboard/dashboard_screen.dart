@@ -24,14 +24,26 @@ class DashboardScreen extends ConsumerWidget {
             icon: const Icon(Icons.sync),
             tooltip: 'Sync accounts',
             onPressed: () {
-              // TODO: Trigger bank sync
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'No bank connections configured. Add one in Settings.',
+                  ),
+                  action: SnackBarAction(
+                    label: 'Settings',
+                    onPressed: () {
+                      StatefulNavigationShell.of(context).goBranch(4);
+                    },
+                  ),
+                ),
+              );
             },
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             tooltip: 'Insights',
             onPressed: () {
-              // TODO: Open insights screen
+              StatefulNavigationShell.of(context).goBranch(3);
             },
           ),
         ],
