@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/local/database/app_database.dart';
 import '../../../domain/usecases/import/csv_import_service.dart';
 import '../accounts/accounts_providers.dart';
 
@@ -583,7 +582,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         // Account selector
         accountsAsync.when(
           loading: () => const LinearProgressIndicator(),
-          error: (_, __) => Text('Error loading accounts',
+          error: (_, _) => Text('Error loading accounts',
               style: TextStyle(color: colorScheme.error)),
           data: (accounts) {
             if (accounts.isEmpty) {
