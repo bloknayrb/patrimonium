@@ -83,7 +83,10 @@ final csvExportServiceProvider = Provider<CsvExportService>((ref) {
 
 final recurringDetectionServiceProvider =
     Provider<RecurringDetectionService>((ref) {
-  return RecurringDetectionService(ref.watch(transactionRepositoryProvider));
+  return RecurringDetectionService(
+    ref.watch(transactionRepositoryProvider),
+    ref.watch(recurringTransactionRepositoryProvider),
+  );
 });
 
 // =============================================================================

@@ -1,3 +1,4 @@
+import '../../../data/repositories/recurring_transaction_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 
 /// A detected recurring transaction pattern.
@@ -27,9 +28,10 @@ class DetectedRecurring {
 
 /// Service that detects recurring patterns from transaction history.
 class RecurringDetectionService {
-  RecurringDetectionService(this._transactionRepo);
+  RecurringDetectionService(this._transactionRepo, this._recurringRepo);
 
   final TransactionRepository _transactionRepo;
+  final RecurringTransactionRepository _recurringRepo;
 
   /// Known frequency patterns: name, expected interval in days, tolerance ratio.
   static const _frequencies = [
@@ -136,6 +138,15 @@ class RecurringDetectionService {
         confidence: bestConfidence,
       ));
     }
+
+    // Filter out patterns that already exist as recurring transactions.
+    final existing = await _recurringRepo.getActiveRecurring();
+    final existingKeys = <String>{};
+    for (final r in existing) {
+      existingKeys.add('${r.payee.toLowerCase().trim()}|${r.accountId}');
+    }
+    results.removeWhere((d) =>
+        existingKeys.contains('${d.payee.toLowerCase().trim()}|${d.accountId}'));
 
     // Sort by confidence descending.
     results.sort((a, b) => b.confidence.compareTo(a.confidence));

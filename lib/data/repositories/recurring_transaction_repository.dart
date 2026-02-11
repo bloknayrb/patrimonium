@@ -23,6 +23,14 @@ class RecurringTransactionRepository {
         .watch();
   }
 
+  /// Get active recurring transactions (one-shot).
+  Future<List<RecurringTransaction>> getActiveRecurring() {
+    return (_db.select(_db.recurringTransactions)
+          ..where((r) => r.isActive.equals(true))
+          ..orderBy([(r) => OrderingTerm.asc(r.nextExpectedDate)]))
+        .get();
+  }
+
   /// Get a single recurring transaction by ID.
   Future<RecurringTransaction?> getRecurringById(String id) {
     return (_db.select(_db.recurringTransactions)
