@@ -66,8 +66,7 @@ class _AddEditGoalScreenState extends ConsumerState<AddEditGoalScreen> {
       _selectedType = g.goalType;
       _selectedIcon = g.icon;
       _selectedColor = Color(g.color);
-      _targetDate =
-          g.targetDate != null ? g.targetDate!.toDateTime() : null;
+      _targetDate = g.targetDate?.toDateTime();
       _linkedAccountId = g.linkedAccountId;
     }
   }
