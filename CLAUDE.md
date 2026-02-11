@@ -309,6 +309,197 @@ Note: `riverpod_generator` and `riverpod_lint` are commented out in pubspec.yaml
 
 Test coverage is minimal. Only `test/widget_test.dart` exists with a placeholder smoke test. Repositories, providers, screens, PIN hashing, and CSV export all lack test coverage. `mocktail` is available as a dev dependency for writing tests.
 
+## Testing Guidelines
+
+### Test Folder Structure
+
+```
+test/
+├── unit/
+│   ├── repositories/
+│   │   └── account_repository_test.dart
+│   ├── usecases/
+│   │   └── pin_service_test.dart
+│   └── extensions/
+│       └── money_extensions_test.dart
+├── widget/
+│   ├── screens/
+│   │   └── dashboard_screen_test.dart
+│   └── widgets/
+│       └── pin_number_pad_test.dart
+├── mocks/
+│   └── mock_repositories.dart
+├── fixtures/
+│   └── test_data.dart
+└── helpers/
+    └── pump_app.dart
+```
+
+### Test Patterns
+
+- **AAA pattern**: Arrange → Act → Assert in every test
+- **Mocktail** for mocking (already a dev dependency — do NOT use Mockito/code-gen mocks)
+- **ProviderContainer** with overrides for testing Riverpod providers:
+  ```dart
+  final container = ProviderContainer(
+    overrides: [
+      databaseProvider.overrideWithValue(mockDb),
+    ],
+  );
+  ```
+- **Widget test helper**: Wrap widgets in `MaterialApp` + `ProviderScope` with necessary overrides
+- **Name tests descriptively**: `'getAccounts returns empty list when no accounts exist'`
+
+### Running Tests
+
+```bash
+flutter test                           # All tests
+flutter test test/unit/                # Unit tests only
+flutter test --coverage                # With coverage report
+genhtml coverage/lcov.info -o coverage/html  # HTML report
+```
+
+## Performance Guidelines
+
+### Widget Optimization
+
+- **Use `const` constructors** on all static widgets — `const Text(...)`, `const Icon(...)`, `const SizedBox(...)`, `const EdgeInsets.all(...)`
+- **Use `ListView.builder`** (never `ListView(children: [...])`) for any list that may exceed a screenful
+- **Add `ValueKey`** to list items that may be reordered or removed: `ValueKey(account.id)`
+- **Extract static subtrees** into their own `const` widget classes to prevent unnecessary rebuilds
+
+### Rebuild Minimization
+
+- Scope `ref.watch()` as narrowly as possible — put it inside individual widgets, not at the screen level
+- Use `ref.watch(provider.select((s) => s.specificField))` for fine-grained rebuilds
+- Move expensive computations out of `build()` — cache in `initState()` or use memoization
+
+### Heavy Computation
+
+- Use `compute()` or `Isolate.spawn()` for operations > 16 ms (e.g., CSV parsing, large data transforms)
+- Keep the UI thread free — never block with synchronous file I/O or large loops
+
+### Image Optimization
+
+- Always set `cacheWidth` / `cacheHeight` on network images to prevent decoding full-resolution bitmaps
+- Use `fit: BoxFit.cover` or `BoxFit.contain` to match display size
+
+## API Integration Patterns (Dio)
+
+The app uses **Dio** for HTTP. When adding API integrations (SimpleFIN, Supabase REST, etc.):
+
+### Interceptor Stack
+
+```dart
+dio.interceptors.addAll([
+  AuthInterceptor(secureStorage),   // Attach Bearer token
+  RetryInterceptor(maxRetries: 3),  // Retry on 5xx / timeout
+  LogInterceptor(requestBody: true, responseBody: true), // Debug only
+]);
+```
+
+### Error Handling
+
+- Wrap all Dio calls in try/catch and map `DioException` types to domain failures
+- Timeout config: `connectTimeout: 10s`, `receiveTimeout: 5s`
+- On 401 → attempt token refresh → retry original request → if refresh fails, force re-auth
+
+### Type-Safe Responses
+
+- Use `json_serializable` or `freezed` for API DTOs — never leave `dynamic` in parsed responses
+- Map DTOs → domain entities at the repository boundary
+
+## Android Build & Deployment
+
+### Release Build
+
+```bash
+# Clean release build with obfuscation
+flutter clean && flutter pub get
+flutter build appbundle --release --obfuscate --split-debug-info=./debug-info
+
+# Split APKs by ABI (smaller per-device downloads)
+flutter build apk --release --split-per-abi --obfuscate --split-debug-info=./debug-info
+```
+
+### App Signing
+
+1. Create upload keystore: `keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+2. Create `android/key.properties` (gitignored) with `storePassword`, `keyPassword`, `keyAlias`, `storeFile`
+3. Reference in `android/app/build.gradle.kts` signing configs
+
+### ProGuard Rules
+
+Keep Flutter and app classes when `minifyEnabled = true`:
+
+```proguard
+# android/app/proguard-rules.pro
+-keep class io.flutter.** { *; }
+-keep class io.flutter.plugins.** { *; }
+-keep class com.patrimonium.** { *; }
+```
+
+### Pre-Release Checklist
+
+- [ ] `flutter analyze` passes with no issues
+- [ ] `flutter test` passes
+- [ ] Version bumped in `pubspec.yaml` (`version: X.Y.Z+N`)
+- [ ] Release build succeeds (`flutter build appbundle --release`)
+- [ ] Tested on physical Android device
+- [ ] Tested on Linux desktop
+- [ ] No `print()` statements in production code (use `kDebugMode` guard)
+- [ ] Sentry DSN configured for crash reporting
+
+## Security Checklist
+
+In addition to the PIN/secure-storage architecture already in place:
+
+- [ ] All secrets in `flutter_secure_storage` (never `SharedPreferences`)
+- [ ] HTTPS only for all network requests
+- [ ] API tokens refreshed automatically on 401
+- [ ] No hardcoded API keys in source — use `SecureStorageService`
+- [ ] `print()` calls guarded by `kDebugMode` to avoid leaking data in production logs
+- [ ] Code obfuscation enabled for release builds (`--obfuscate`)
+- [ ] `android:usesCleartextTraffic="false"` in AndroidManifest.xml
+- [ ] Input validation on all user-facing forms (amounts, text fields)
+- [ ] Drift uses parameterized queries (built-in — never use `customSelect` with string interpolation)
+
+## Code Style
+
+### Import Order
+
+```dart
+// 1. Dart SDK
+import 'dart:async';
+
+// 2. Flutter SDK
+import 'package:flutter/material.dart';
+
+// 3. Third-party packages (alphabetical)
+import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+// 4. Project imports (alphabetical)
+import 'package:patrimonium/core/di/providers.dart';
+import 'package:patrimonium/data/repositories/account_repository.dart';
+```
+
+### File Size
+
+- **Widget files**: Keep under 200 lines — extract sub-widgets
+- **Repository files**: Keep under 300 lines
+- **Provider files**: Keep under 150 lines
+- If a file exceeds these limits, split by logical concern
+
+### Naming
+
+- Files: `snake_case.dart`
+- Classes: `PascalCase`
+- Variables/methods: `camelCase`
+- Private members: `_leadingUnderscore`
+- Constants: `camelCase` (not SCREAMING_CASE)
+
 ## Current Status
 
 - **Phase 1 (Foundation)**: Complete — database (21 tables), PIN auth with PBKDF2, biometric auth, Material 3 theme, secure storage, error handling, routing with auth redirects, settings screen, auto-lock
