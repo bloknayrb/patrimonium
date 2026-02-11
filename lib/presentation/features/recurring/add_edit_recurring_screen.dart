@@ -9,7 +9,6 @@ import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/widgets/category_picker_sheet.dart';
 import '../accounts/accounts_providers.dart';
-import 'recurring_providers.dart';
 
 /// Frequency options for the dropdown.
 const _frequencies = [
