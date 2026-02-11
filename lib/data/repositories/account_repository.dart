@@ -133,14 +133,36 @@ class AccountRepository {
     ));
   }
 
-  /// Delete an account and all its associated transactions.
+  /// Delete an account and all associated data (transactions, recurring,
+  /// holdings). Nulls out references from goals and transfer transactions.
   Future<void> deleteAccount(String id) async {
     await _db.transaction(() async {
-      // Delete all transactions belonging to this account first
+      // Delete recurring transactions for this account
+      await (_db.delete(_db.recurringTransactions)
+            ..where((r) => r.accountId.equals(id)))
+          .go();
+
+      // Delete investment holdings for this account
+      await (_db.delete(_db.investmentHoldings)
+            ..where((h) => h.accountId.equals(id)))
+          .go();
+
+      // Null out linkedAccountId on goals referencing this account
+      await (_db.update(_db.goals)
+            ..where((g) => g.linkedAccountId.equals(id)))
+          .write(const GoalsCompanion(linkedAccountId: Value(null)));
+
+      // Null out transferAccountId on transactions referencing this account
+      await (_db.update(_db.transactions)
+            ..where((t) => t.transferAccountId.equals(id)))
+          .write(const TransactionsCompanion(transferAccountId: Value(null)));
+
+      // Delete all transactions belonging to this account
       await (_db.delete(_db.transactions)
             ..where((t) => t.accountId.equals(id)))
           .go();
-      // Then delete the account itself
+
+      // Delete the account itself
       await (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go();
     });
   }

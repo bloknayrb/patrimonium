@@ -83,9 +83,46 @@ class CategoryRepository {
         .then((rows) => rows > 0);
   }
 
-  /// Delete a category by ID. Subcategories must be handled separately.
-  Future<int> deleteCategory(String id) {
-    return (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+  /// Delete a category and cascade: removes children, nulls out references
+  /// on transactions/recurring, and deletes associated budgets.
+  Future<void> deleteCategory(String id) async {
+    await _db.transaction(() async {
+      // Find child category IDs
+      final children = await (_db.select(_db.categories)
+            ..where((c) => c.parentId.equals(id)))
+          .get();
+      final childIds = children.map((c) => c.id).toList();
+      final allIds = [id, ...childIds];
+
+      // Null out categoryId on transactions referencing affected categories
+      for (final catId in allIds) {
+        await (_db.update(_db.transactions)
+              ..where((t) => t.categoryId.equals(catId)))
+            .write(const TransactionsCompanion(categoryId: Value(null)));
+      }
+
+      // Null out categoryId on recurring transactions
+      for (final catId in allIds) {
+        await (_db.update(_db.recurringTransactions)
+              ..where((r) => r.categoryId.equals(catId)))
+            .write(
+                const RecurringTransactionsCompanion(categoryId: Value(null)));
+      }
+
+      // Delete budgets referencing affected categories
+      for (final catId in allIds) {
+        await (_db.delete(_db.budgets)
+              ..where((b) => b.categoryId.equals(catId)))
+            .go();
+      }
+
+      // Delete child categories, then parent
+      for (final childId in childIds) {
+        await (_db.delete(_db.categories)..where((c) => c.id.equals(childId)))
+            .go();
+      }
+      await (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+    });
   }
 
   /// Check if any categories exist (for initial seed check).
