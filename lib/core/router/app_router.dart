@@ -10,6 +10,11 @@ import '../../presentation/features/onboarding/onboarding_screen.dart';
 import '../../presentation/features/transactions/transactions_screen.dart';
 import '../../presentation/features/ai_assistant/ai_assistant_screen.dart';
 import '../../presentation/features/settings/settings_screen.dart';
+import '../../presentation/features/budgets/budgets_screen.dart';
+import '../../presentation/features/goals/goals_screen.dart';
+import '../../presentation/features/recurring/recurring_screen.dart';
+import '../../presentation/features/import/csv_import_screen.dart';
+import '../../presentation/features/import/import_history_screen.dart';
 import '../../presentation/shared/widgets/app_shell.dart';
 import '../di/providers.dart';
 
@@ -26,6 +31,11 @@ class AppRoutes {
   static const String aiAssistant = '/ai';
   static const String settings = '/settings';
   static const String onboarding = '/onboarding';
+  static const String budgets = '/budgets';
+  static const String goals = '/goals';
+  static const String recurring = '/recurring';
+  static const String csvImport = '/import/csv';
+  static const String importHistory = '/import/history';
 }
 
 /// Navigator keys for each tab branch.
@@ -88,6 +98,41 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.onboarding,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Budgets (full-screen)
+      GoRoute(
+        path: AppRoutes.budgets,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const BudgetsScreen(),
+      ),
+
+      // Goals (full-screen)
+      GoRoute(
+        path: AppRoutes.goals,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const GoalsScreen(),
+      ),
+
+      // Recurring transactions (full-screen)
+      GoRoute(
+        path: AppRoutes.recurring,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const RecurringScreen(),
+      ),
+
+      // CSV import (full-screen)
+      GoRoute(
+        path: AppRoutes.csvImport,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CsvImportScreen(),
+      ),
+
+      // Import history (full-screen)
+      GoRoute(
+        path: AppRoutes.importHistory,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ImportHistoryScreen(),
       ),
 
       // Main app with bottom navigation
