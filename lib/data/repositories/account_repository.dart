@@ -167,6 +167,50 @@ class AccountRepository {
     });
   }
 
+  /// Link an account to a bank connection.
+  Future<void> linkToBank(
+    String accountId,
+    String bankConnectionId,
+    String externalId,
+  ) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
+        .write(AccountsCompanion(
+      bankConnectionId: Value(bankConnectionId),
+      externalId: Value(externalId),
+      lastSyncedAt: Value(now),
+      updatedAt: Value(now),
+    ));
+  }
+
+  /// Unlink an account from its bank connection.
+  Future<void> unlinkFromBank(String accountId) {
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
+        .write(AccountsCompanion(
+      bankConnectionId: const Value(null),
+      externalId: const Value(null),
+      lastSyncedAt: const Value(null),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
+
+  /// Get all accounts linked to a specific bank connection.
+  Future<List<Account>> getAccountsByConnection(String bankConnectionId) {
+    return (_db.select(_db.accounts)
+          ..where((a) => a.bankConnectionId.equals(bankConnectionId))
+          ..orderBy([(a) => OrderingTerm.asc(a.displayOrder)]))
+        .get();
+  }
+
+  /// Update the last synced timestamp for an account.
+  Future<void> updateLastSyncedAt(String accountId) {
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(accountId)))
+        .write(AccountsCompanion(
+      lastSyncedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
+
   /// Get count of accounts.
   Future<int> getAccountCount() async {
     final count = _db.accounts.id.count();

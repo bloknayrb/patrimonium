@@ -27,6 +27,18 @@ class ImportRepository {
         .get();
   }
 
+  /// Watch import history filtered by source, limited to most recent entries.
+  Stream<List<ImportHistoryData>> watchImportHistoryBySource(
+    String source, {
+    int limit = 10,
+  }) {
+    return (_db.select(_db.importHistory)
+          ..where((r) => r.source.equals(source))
+          ..orderBy([(r) => OrderingTerm.desc(r.createdAt)])
+          ..limit(limit))
+        .watch();
+  }
+
   /// Delete an import record by ID.
   Future<int> deleteImportRecord(String id) {
     return (_db.delete(_db.importHistory)..where((r) => r.id.equals(id))).go();
