@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
@@ -284,7 +285,7 @@ class _BudgetHealthCard extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    // Budgets not yet implemented
+                    context.push(AppRoutes.budgets);
                   },
                   child: const Text('See all'),
                 ),

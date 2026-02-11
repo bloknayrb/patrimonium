@@ -25,7 +25,7 @@ class BudgetsScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add budget',
-            onPressed: () => _navigateToAddBudget(context),
+            onPressed: () => _navigateToAddBudget(context, ref),
           ),
         ],
       ),
@@ -40,7 +40,7 @@ class BudgetsScreen extends ConsumerWidget {
               description:
                   'Create budgets to track your spending by category and stay on top of your finances.',
               actionLabel: 'Add Budget',
-              onAction: () => _navigateToAddBudget(context),
+              onAction: () => _navigateToAddBudget(context, ref),
             );
           }
           return _BudgetsListView(budgets: budgets);
@@ -49,12 +49,15 @@ class BudgetsScreen extends ConsumerWidget {
     );
   }
 
-  void _navigateToAddBudget(BuildContext context) {
-    Navigator.of(context).push(
+  Future<void> _navigateToAddBudget(BuildContext context, WidgetRef ref) async {
+    final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => const AddEditBudgetScreen(),
       ),
     );
+    if (result == true) {
+      ref.invalidate(budgetsWithSpentProvider);
+    }
   }
 }
 
@@ -191,14 +194,14 @@ class _SummaryCard extends StatelessWidget {
 }
 
 /// Single budget list item with category name, amounts, and progress bar.
-class _BudgetTile extends StatelessWidget {
+class _BudgetTile extends ConsumerWidget {
   final BudgetWithSpent item;
   final Category? category;
 
   const _BudgetTile({required this.item, this.category});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final finance = theme.finance;
@@ -253,12 +256,15 @@ class _BudgetTile extends StatelessWidget {
           color: colorScheme.onSurfaceVariant,
         ),
       ),
-      onTap: () {
-        Navigator.of(context).push(
+      onTap: () async {
+        final result = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (_) => AddEditBudgetScreen(budget: item.budget),
           ),
         );
+        if (result == true) {
+          ref.invalidate(budgetsWithSpentProvider);
+        }
       },
     );
   }
