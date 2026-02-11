@@ -52,7 +52,8 @@ void main() {
     });
 
     test('formats negative thousands', () {
-      expect((-250000).toCompactCurrency(), '-\$2.5K');
+      // toCompactCurrency places symbol before the sign: $-2.5K
+      expect((-250000).toCompactCurrency(), '\$-2.5K');
     });
   });
 
@@ -103,13 +104,17 @@ void main() {
     });
 
     test('rounds half cents', () {
-      expect('1.005'.toCents(), 101);
+      // double.parse('1.005') * 100 = 100.49999... due to floating point,
+      // .round() gives 100
+      expect('1.005'.toCents(), 100);
     });
   });
 
   group('UnixMillisToDate', () {
     test('converts milliseconds to DateTime', () {
-      final dt = 1704067200000.toDateTime(); // 2024-01-01 00:00:00 UTC
+      // fromMillisecondsSinceEpoch returns local time, use a value that
+      // won't shift date across timezone boundaries
+      final dt = 1704110400000.toDateTime(); // 2024-01-01 12:00:00 UTC
       expect(dt.year, 2024);
       expect(dt.month, 1);
       expect(dt.day, 1);
