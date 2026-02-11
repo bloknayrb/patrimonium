@@ -10,6 +10,10 @@ import '../../presentation/features/onboarding/onboarding_screen.dart';
 import '../../presentation/features/transactions/transactions_screen.dart';
 import '../../presentation/features/ai_assistant/ai_assistant_screen.dart';
 import '../../presentation/features/settings/settings_screen.dart';
+import '../../presentation/features/bank_connections/simplefin_setup_screen.dart';
+import '../../presentation/features/bank_connections/account_linking_screen.dart';
+import '../../presentation/features/bank_connections/bank_connections_screen.dart';
+import '../../presentation/features/bank_connections/connection_detail_screen.dart';
 import '../../presentation/shared/widgets/app_shell.dart';
 import '../di/providers.dart';
 
@@ -26,6 +30,10 @@ class AppRoutes {
   static const String aiAssistant = '/ai';
   static const String settings = '/settings';
   static const String onboarding = '/onboarding';
+  static const String bankConnections = '/bank-connections';
+  static const String simplefinSetup = '/simplefin-setup';
+  static const String accountLinking = '/account-linking';
+  static const String connectionDetail = '/connection-detail';
 }
 
 /// Navigator keys for each tab branch.
@@ -88,6 +96,34 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.onboarding,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Bank connections
+      GoRoute(
+        path: AppRoutes.bankConnections,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const BankConnectionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.simplefinSetup,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SimplefinSetupScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.accountLinking}/:connectionId',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final connectionId = state.pathParameters['connectionId']!;
+          return AccountLinkingScreen(connectionId: connectionId);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.connectionDetail}/:connectionId',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final connectionId = state.pathParameters['connectionId']!;
+          return ConnectionDetailScreen(connectionId: connectionId);
+        },
       ),
 
       // Main app with bottom navigation

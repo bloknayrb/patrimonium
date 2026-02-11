@@ -45,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Manage bank connections'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              _showComingSoon(context, 'Bank connections');
+              context.push(AppRoutes.bankConnections);
             },
           ),
 
