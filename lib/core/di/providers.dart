@@ -9,11 +9,13 @@ import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../../data/repositories/goal_repository.dart';
+import '../../data/repositories/import_repository.dart';
 import '../../data/repositories/recurring_transaction_repository.dart';
 import '../../domain/usecases/auth/biometric_service.dart';
 import '../../domain/usecases/auth/pin_service.dart';
 import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
+import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
 import '../router/app_router.dart';
 
@@ -86,6 +88,21 @@ final recurringDetectionServiceProvider =
   return RecurringDetectionService(
     ref.watch(transactionRepositoryProvider),
     ref.watch(recurringTransactionRepositoryProvider),
+  );
+});
+
+// =============================================================================
+// IMPORT
+// =============================================================================
+
+final importRepositoryProvider = Provider<ImportRepository>((ref) {
+  return ImportRepository(ref.watch(databaseProvider));
+});
+
+final csvImportServiceProvider = Provider<CsvImportService>((ref) {
+  return CsvImportService(
+    ref.watch(transactionRepositoryProvider),
+    ref.watch(importRepositoryProvider),
   );
 });
 
