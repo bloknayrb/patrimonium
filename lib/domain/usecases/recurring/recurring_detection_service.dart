@@ -121,10 +121,9 @@ class RecurringDetectionService {
       // Use the most recent category.
       final lastCategoryId = txs.last.categoryId;
 
-      // Calculate next expected date.
+      // Calculate next expected date using calendar-aware arithmetic.
       final lastDate = txs.last.date;
-      final intervalMs = _intervalMs(bestFrequency);
-      final nextExpected = lastDate + intervalMs;
+      final nextExpected = _calculateNextDate(lastDate, bestFrequency);
 
       results.add(DetectedRecurring(
         payee: txs.last.payee, // Use original casing from most recent.
@@ -153,17 +152,33 @@ class RecurringDetectionService {
     return results;
   }
 
-  /// Convert a frequency name to milliseconds.
-  static int _intervalMs(String frequency) {
+  /// Calculate next expected date using calendar-aware arithmetic.
+  /// Weekly/biweekly use fixed days; monthly/quarterly/annual use
+  /// DateTime month arithmetic with end-of-month clamping.
+  static int _calculateNextDate(int lastDateMs, String frequency) {
     const msPerDay = 1000 * 60 * 60 * 24;
+    final dt = DateTime.fromMillisecondsSinceEpoch(lastDateMs);
+
     return switch (frequency) {
-      'weekly' => 7 * msPerDay,
-      'biweekly' => 14 * msPerDay,
-      'monthly' => 30 * msPerDay,
-      'quarterly' => 90 * msPerDay,
-      'annual' => 365 * msPerDay,
-      _ => 30 * msPerDay,
+      'weekly' => lastDateMs + 7 * msPerDay,
+      'biweekly' => lastDateMs + 14 * msPerDay,
+      'monthly' => _addMonths(dt, 1).millisecondsSinceEpoch,
+      'quarterly' => _addMonths(dt, 3).millisecondsSinceEpoch,
+      'annual' => _addMonths(dt, 12).millisecondsSinceEpoch,
+      _ => _addMonths(dt, 1).millisecondsSinceEpoch,
     };
+  }
+
+  /// Add [months] to [dt], clamping the day to the last day of the
+  /// resulting month (e.g., Jan 31 + 1 month → Feb 28).
+  static DateTime _addMonths(DateTime dt, int months) {
+    final targetMonth = dt.month + months;
+    final targetYear = dt.year + (targetMonth - 1) ~/ 12;
+    final normalizedMonth = ((targetMonth - 1) % 12) + 1;
+    // Clamp day to last day of target month
+    final lastDay = DateTime(targetYear, normalizedMonth + 1, 0).day;
+    final clampedDay = dt.day > lastDay ? lastDay : dt.day;
+    return DateTime(targetYear, normalizedMonth, clampedDay);
   }
 }
 
