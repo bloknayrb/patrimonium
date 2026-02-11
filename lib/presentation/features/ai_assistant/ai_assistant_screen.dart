@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// AI Assistant chat screen.
 class AiAssistantScreen extends ConsumerStatefulWidget {
@@ -70,8 +71,24 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       appBar: AppBar(
         title: const Text('AI Assistant'),
         actions: [
-          PopupMenuButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              switch (value) {
+                case 'new_chat':
+                  setState(() {
+                    _messages.clear();
+                  });
+                case 'history':
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Chat history coming soon.'),
+                    ),
+                  );
+                case 'provider':
+                  StatefulNavigationShell.of(context).goBranch(4);
+              }
+            },
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'new_chat',

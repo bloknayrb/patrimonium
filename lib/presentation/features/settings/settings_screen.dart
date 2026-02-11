@@ -31,7 +31,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Configure Claude, OpenAI, or Ollama'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to LLM configuration
+              _showComingSoon(context, 'LLM provider configuration');
             },
           ),
 
@@ -45,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Manage bank connections'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to bank connections
+              _showComingSoon(context, 'Bank connections');
             },
           ),
 
@@ -59,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Manage income and expense categories'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to categories management
+              _showComingSoon(context, 'Category management');
             },
           ),
           ListTile(
@@ -68,7 +68,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Rules for automatic transaction categorization'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to rules management
+              _showComingSoon(context, 'Auto-categorization rules');
             },
           ),
 
@@ -150,7 +150,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('CSV, Mint, YNAB, Monarch'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to import
+              _showComingSoon(context, 'Data import');
             },
           ),
           ListTile(
@@ -166,7 +166,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Supabase backup'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // TODO: Navigate to sync settings
+              _showComingSoon(context, 'Cloud sync');
             },
           ),
 
@@ -195,6 +195,12 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 32),
         ],
       ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$feature coming soon.')),
     );
   }
 
