@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/money_extensions.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
 import 'import_providers.dart';
 
