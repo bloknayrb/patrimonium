@@ -8,6 +8,7 @@ import '../../data/repositories/account_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/budget_repository.dart';
+import '../../data/repositories/goal_repository.dart';
 import '../../domain/usecases/auth/biometric_service.dart';
 import '../../domain/usecases/auth/pin_service.dart';
 import '../../domain/usecases/categories/category_seeder.dart';
@@ -51,6 +52,10 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 
 final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
   return BudgetRepository(ref.watch(databaseProvider));
+});
+
+final goalRepositoryProvider = Provider<GoalRepository>((ref) {
+  return GoalRepository(ref.watch(databaseProvider));
 });
 
 // =============================================================================
