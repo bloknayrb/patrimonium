@@ -104,6 +104,14 @@ class BankSyncError extends AppError {
   factory BankSyncError.circuitOpen() => const BankSyncError(
         message: 'Bank sync is temporarily paused due to repeated failures. Will retry automatically.',
       );
+
+  factory BankSyncError.paymentRequired() => const BankSyncError(
+        message: 'SimpleFIN subscription payment required. Please check your account at simplefin.org.',
+      );
+
+  factory BankSyncError.tokenCompromised() => const BankSyncError(
+        message: 'Setup token already claimed or compromised. Please generate a new token from simplefin.org.',
+      );
 }
 
 /// LLM/AI-related errors.

@@ -19,6 +19,8 @@ class AppConstants {
   static const int minSyncIntervalMinutes = 15;
   static const int syncTimeoutSeconds = 60;
   static const int maxConsecutiveSyncFailures = 3;
+  static const int maxDailySyncs = 24;
+  static const int backgroundSyncIntervalHours = 8;
 
   /// LLM rate limits.
   static const int maxAutomatedInsightsPerHour = 20;

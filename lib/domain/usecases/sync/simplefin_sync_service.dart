@@ -1,0 +1,426 @@
+import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/constants/app_constants.dart';
+import '../../../core/error/app_error.dart';
+import '../../../data/local/database/app_database.dart';
+import '../../../data/local/secure_storage/secure_storage_service.dart';
+import '../../../data/remote/simplefin/simplefin_client.dart';
+import '../../../data/remote/simplefin/simplefin_models.dart';
+import '../../../data/repositories/account_repository.dart';
+import '../../../data/repositories/bank_connection_repository.dart';
+import '../../../data/repositories/import_repository.dart';
+import '../../../data/repositories/transaction_repository.dart';
+
+// =============================================================================
+// DATA CLASSES
+// =============================================================================
+
+/// Result of a sync operation.
+class SyncResult {
+  final String connectionId;
+  final int accountsUpdated;
+  final int transactionsImported;
+  final int transactionsSkipped;
+  final String? errorMessage;
+  final bool rateLimited;
+
+  const SyncResult({
+    required this.connectionId,
+    this.accountsUpdated = 0,
+    this.transactionsImported = 0,
+    this.transactionsSkipped = 0,
+    this.errorMessage,
+    this.rateLimited = false,
+  });
+}
+
+/// Connection status constants.
+class ConnectionStatus {
+  ConnectionStatus._();
+
+  static const String connected = 'connected';
+  static const String syncing = 'syncing';
+  static const String error = 'error';
+  static const String disconnected = 'disconnected';
+  static const String rateLimited = 'rate_limited';
+}
+
+// =============================================================================
+// SERVICE
+// =============================================================================
+
+/// Orchestrates SimpleFIN bank sync operations.
+///
+/// Handles token claiming, account syncing, rate limiting,
+/// and circuit breaker logic.
+class SimplefinSyncService {
+  SimplefinSyncService({
+    required SimplefinClient simplefinClient,
+    required SecureStorageService secureStorage,
+    required BankConnectionRepository connectionRepo,
+    required AccountRepository accountRepo,
+    required TransactionRepository transactionRepo,
+    required ImportRepository importRepo,
+  })  : _simplefinClient = simplefinClient,
+        _secureStorage = secureStorage,
+        _connectionRepo = connectionRepo,
+        _accountRepo = accountRepo,
+        _transactionRepo = transactionRepo,
+        _importRepo = importRepo;
+
+  final SimplefinClient _simplefinClient;
+  final SecureStorageService _secureStorage;
+  final BankConnectionRepository _connectionRepo;
+  final AccountRepository _accountRepo;
+  final TransactionRepository _transactionRepo;
+  final ImportRepository _importRepo;
+
+  /// Tracks consecutive sync failures for circuit breaker.
+  int _consecutiveFailures = 0;
+  DateTime? _lastFailureTime;
+
+  static const _uuid = Uuid();
+
+  /// Claim a setup token and create a bank connection.
+  ///
+  /// Returns the connection ID on success.
+  Future<String> claimAndConnect(String base64Token) async {
+    try {
+      // 1. Claim the token to get access URL
+      final accessUrl = await _simplefinClient.claimSetupToken(base64Token);
+
+      // 2. Store access URL in secure storage
+      await _secureStorage.setSimplefinToken(accessUrl.toString());
+
+      // 3. Fetch accounts (balances only) to get institution info
+      final response = await _simplefinClient.getAccounts(
+        accessUrl,
+        balancesOnly: true,
+      );
+
+      // Determine institution name from first account
+      String institutionName = 'SimpleFIN';
+      if (response.accounts.isNotEmpty) {
+        final first = response.accounts.first;
+        institutionName =
+            first.orgName ?? first.orgDomain ?? first.name;
+      }
+
+      // 4. Create bank connection record
+      final connectionId = _uuid.v4();
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      await _connectionRepo.insertConnection(BankConnectionsCompanion.insert(
+        id: connectionId,
+        provider: 'simplefin',
+        institutionName: institutionName,
+        status: ConnectionStatus.connected,
+        createdAt: now,
+        updatedAt: now,
+      ));
+
+      return connectionId;
+    } on SimplefinApiException catch (e) {
+      if (e.statusCode == 403) {
+        throw BankSyncError.tokenCompromised();
+      }
+      if (e.statusCode == 402) {
+        throw BankSyncError.paymentRequired();
+      }
+      throw BankSyncError(message: e.message);
+    }
+  }
+
+  /// Sync a connection's accounts and transactions.
+  ///
+  /// Returns a [SyncResult] with counts and status.
+  Future<SyncResult> syncConnection(String connectionId) async {
+    // Check rate limiting
+    if (!await canSync(connectionId)) {
+      return SyncResult(
+        connectionId: connectionId,
+        rateLimited: true,
+        errorMessage: 'Rate limited. Please wait before syncing again.',
+      );
+    }
+
+    try {
+      // Load access URL
+      final tokenString = await _secureStorage.getSimplefinToken();
+      if (tokenString == null) {
+        throw const BankSyncError(
+          message: 'No SimpleFIN credentials found. Please reconnect.',
+        );
+      }
+      final accessUrl = SimplefinAccessUrl.parse(tokenString);
+
+      // Set status to syncing
+      await _connectionRepo.updateStatus(
+        connectionId,
+        ConnectionStatus.syncing,
+      );
+
+      // Compute sync window
+      final connection = await _connectionRepo.getConnectionById(connectionId);
+      final now = DateTime.now();
+      int startDateUnix;
+
+      if (connection?.lastSyncedAt == null) {
+        // First sync: 90 days back
+        startDateUnix =
+            now.subtract(const Duration(days: 90)).millisecondsSinceEpoch ~/
+                1000;
+      } else {
+        // Subsequent: lastSyncedAt minus 3 days overlap
+        startDateUnix = (connection!.lastSyncedAt! -
+                const Duration(days: 3).inMilliseconds) ~/
+            1000;
+      }
+
+      // Fetch from SimpleFIN
+      final response = await _simplefinClient.getAccounts(
+        accessUrl,
+        startDate: startDateUnix,
+        includePending: true,
+      );
+
+      var accountsUpdated = 0;
+      var transactionsImported = 0;
+      var transactionsSkipped = 0;
+
+      // Process each account
+      for (final sfAccount in response.accounts) {
+        // Find linked local account
+        final linkedAccounts =
+            await _accountRepo.getAccountsByConnection(connectionId);
+        final localAccount = linkedAccounts
+            .where((a) => a.externalId == sfAccount.id)
+            .firstOrNull;
+
+        if (localAccount == null) continue;
+
+        // Update balance
+        await _accountRepo.updateBalance(
+          localAccount.id,
+          sfAccount.balanceCents,
+        );
+        await _accountRepo.updateLastSyncedAt(localAccount.id);
+        accountsUpdated++;
+
+        // Process transactions
+        for (final sfTxn in sfAccount.transactions) {
+          final externalId = '$connectionId:${sfTxn.id}';
+
+          // Check for existing transaction
+          final existing =
+              await _transactionRepo.getByExternalId(externalId);
+
+          if (existing != null) {
+            // When a pending transaction posts, update amount/date/description
+            // (banks often adjust these when a pending charge clears)
+            if (existing.isPending && !sfTxn.isPending) {
+              final dateUnixExisting =
+                  sfTxn.transactedAtUnix ?? sfTxn.postedUnix;
+              await _transactionRepo.updateTransaction(
+                TransactionsCompanion(
+                  id: Value(existing.id),
+                  amountCents: Value(sfTxn.amountCents),
+                  date: Value(dateUnixExisting * 1000),
+                  payee: Value(sfTxn.description),
+                  isPending: const Value(false),
+                  updatedAt: Value(now.millisecondsSinceEpoch),
+                ),
+              );
+            }
+            transactionsSkipped++;
+            continue;
+          }
+
+          // Determine date (prefer transactedAt, fall back to posted)
+          final dateUnix = sfTxn.transactedAtUnix ?? sfTxn.postedUnix;
+          final dateMillis = dateUnix * 1000;
+
+          // Insert new transaction
+          final txnId = _uuid.v4();
+          final nowMillis = now.millisecondsSinceEpoch;
+
+          await _transactionRepo.insertTransaction(
+            TransactionsCompanion.insert(
+              id: txnId,
+              accountId: localAccount.id,
+              amountCents: sfTxn.amountCents,
+              date: dateMillis,
+              payee: sfTxn.description,
+              externalId: Value(externalId),
+              isPending: Value(sfTxn.isPending),
+              createdAt: nowMillis,
+              updatedAt: nowMillis,
+            ),
+          );
+          transactionsImported++;
+        }
+      }
+
+      // Update connection
+      final nowMillis = now.millisecondsSinceEpoch;
+      await _connectionRepo.updateLastSyncedAt(connectionId, nowMillis);
+      await _connectionRepo.updateStatus(
+        connectionId,
+        ConnectionStatus.connected,
+      );
+
+      // Record import history
+      final institutionName =
+          connection?.institutionName ?? 'SimpleFIN';
+      await _importRepo.insertImportRecord(ImportHistoryCompanion.insert(
+        id: _uuid.v4(),
+        source: 'simplefin',
+        fileName: institutionName,
+        rowCount: transactionsImported + transactionsSkipped,
+        importedCount: transactionsImported,
+        skippedCount: transactionsSkipped,
+        status: 'completed',
+        createdAt: nowMillis,
+      ));
+
+      // Reset failure counter on success
+      _consecutiveFailures = 0;
+      _lastFailureTime = null;
+
+      return SyncResult(
+        connectionId: connectionId,
+        accountsUpdated: accountsUpdated,
+        transactionsImported: transactionsImported,
+        transactionsSkipped: transactionsSkipped,
+      );
+    } on SimplefinApiException catch (e) {
+      _recordFailure();
+      final errorMsg = e.message;
+      await _connectionRepo.updateStatus(
+        connectionId,
+        ConnectionStatus.error,
+        errorMessage: errorMsg,
+      );
+      return SyncResult(
+        connectionId: connectionId,
+        errorMessage: errorMsg,
+      );
+    } catch (e) {
+      _recordFailure();
+      final errorMsg = e is AppError ? e.message : e.toString();
+      await _connectionRepo.updateStatus(
+        connectionId,
+        ConnectionStatus.error,
+        errorMessage: errorMsg,
+      );
+      return SyncResult(
+        connectionId: connectionId,
+        errorMessage: errorMsg,
+      );
+    }
+  }
+
+  /// Check if a sync is allowed (rate limiting + circuit breaker).
+  Future<bool> canSync(String connectionId) async {
+    // Check circuit breaker
+    if (_consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures) {
+      final backoff = _getBackoffDuration();
+      if (_lastFailureTime != null &&
+          DateTime.now().difference(_lastFailureTime!) < backoff) {
+        return false;
+      }
+      // Backoff period elapsed, allow retry
+    }
+
+    // Check minimum interval
+    final connection = await _connectionRepo.getConnectionById(connectionId);
+    if (connection?.lastSyncedAt != null) {
+      final lastSync =
+          DateTime.fromMillisecondsSinceEpoch(connection!.lastSyncedAt!);
+      final elapsed = DateTime.now().difference(lastSync);
+      if (elapsed.inMinutes < AppConstants.minSyncIntervalMinutes) {
+        return false;
+      }
+    }
+
+    // Check daily sync count (query ImportHistory for today's simplefin syncs)
+    final todayStart = DateTime.now();
+    final startOfDay =
+        DateTime(todayStart.year, todayStart.month, todayStart.day)
+            .millisecondsSinceEpoch;
+    final history = await _importRepo.getImportHistory();
+    final todaySyncs = history
+        .where((h) => h.source == 'simplefin' && h.createdAt >= startOfDay)
+        .length;
+    if (todaySyncs >= AppConstants.maxDailySyncs) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Get the time until the next sync is allowed.
+  Future<Duration?> timeUntilNextSync(String connectionId) async {
+    // Check circuit breaker first
+    if (_consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures &&
+        _lastFailureTime != null) {
+      final backoff = _getBackoffDuration();
+      final elapsed = DateTime.now().difference(_lastFailureTime!);
+      if (elapsed < backoff) {
+        return backoff - elapsed;
+      }
+    }
+
+    // Check minimum interval
+    final connection = await _connectionRepo.getConnectionById(connectionId);
+    if (connection?.lastSyncedAt != null) {
+      final lastSync =
+          DateTime.fromMillisecondsSinceEpoch(connection!.lastSyncedAt!);
+      final elapsed = DateTime.now().difference(lastSync);
+      final minInterval =
+          Duration(minutes: AppConstants.minSyncIntervalMinutes);
+      if (elapsed < minInterval) {
+        return minInterval - elapsed;
+      }
+    }
+
+    return null;
+  }
+
+  /// Disconnect a bank connection.
+  ///
+  /// Clears credentials, unlinks accounts, updates status.
+  /// Does NOT delete transaction history.
+  Future<void> disconnect(String connectionId) async {
+    // Clear credentials
+    await _secureStorage.clearSimplefinToken();
+
+    // Unlink all accounts tied to this connection
+    final linkedAccounts =
+        await _accountRepo.getAccountsByConnection(connectionId);
+    for (final account in linkedAccounts) {
+      await _accountRepo.unlinkFromBank(account.id);
+    }
+
+    // Update connection status
+    await _connectionRepo.updateStatus(
+      connectionId,
+      ConnectionStatus.disconnected,
+    );
+  }
+
+  void _recordFailure() {
+    _consecutiveFailures++;
+    _lastFailureTime = DateTime.now();
+  }
+
+  /// Exponential backoff: 5min, 30min, 2hr.
+  Duration _getBackoffDuration() {
+    return switch (_consecutiveFailures) {
+      <= 3 => const Duration(minutes: 5),
+      <= 5 => const Duration(minutes: 30),
+      _ => const Duration(hours: 2),
+    };
+  }
+}

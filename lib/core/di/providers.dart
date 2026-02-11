@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,10 @@ import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
+import '../../data/remote/dio_client.dart';
+import '../../data/remote/simplefin/simplefin_client.dart';
+import '../../data/repositories/bank_connection_repository.dart';
+import '../../domain/usecases/sync/simplefin_sync_service.dart';
 import '../router/app_router.dart';
 
 // =============================================================================
@@ -36,6 +41,20 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 /// Provides the secure storage service.
 final secureStorageProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
+});
+
+// =============================================================================
+// NETWORKING
+// =============================================================================
+
+/// Provides a configured Dio HTTP client.
+final dioClientProvider = Provider<Dio>((ref) {
+  return createDioClient();
+});
+
+/// Provides the SimpleFIN API client.
+final simplefinClientProvider = Provider<SimplefinClient>((ref) {
+  return SimplefinClient(ref.watch(dioClientProvider));
 });
 
 // =============================================================================
@@ -65,6 +84,26 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 final recurringTransactionRepositoryProvider =
     Provider<RecurringTransactionRepository>((ref) {
   return RecurringTransactionRepository(ref.watch(databaseProvider));
+});
+
+// =============================================================================
+// BANK CONNECTIONS
+// =============================================================================
+
+final bankConnectionRepositoryProvider =
+    Provider<BankConnectionRepository>((ref) {
+  return BankConnectionRepository(ref.watch(databaseProvider));
+});
+
+final simplefinSyncServiceProvider = Provider<SimplefinSyncService>((ref) {
+  return SimplefinSyncService(
+    simplefinClient: ref.watch(simplefinClientProvider),
+    secureStorage: ref.watch(secureStorageProvider),
+    connectionRepo: ref.watch(bankConnectionRepositoryProvider),
+    accountRepo: ref.watch(accountRepositoryProvider),
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    importRepo: ref.watch(importRepositoryProvider),
+  );
 });
 
 // =============================================================================

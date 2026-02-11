@@ -169,6 +169,23 @@ class TransactionRepository {
     return (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Get a transaction by its external ID.
+  Future<Transaction?> getByExternalId(String externalId) {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.externalId.equals(externalId))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  /// Update the pending status of a transaction.
+  Future<void> updatePendingStatus(String id, bool isPending) {
+    return (_db.update(_db.transactions)..where((t) => t.id.equals(id)))
+        .write(TransactionsCompanion(
+      isPending: Value(isPending),
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
+
   /// Check for duplicate by external ID.
   Future<bool> existsByExternalId(String externalId) async {
     final result = await (_db.select(_db.transactions)
