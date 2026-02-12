@@ -9,6 +9,11 @@ A personal finance management app built with Flutter, featuring local-first data
 - **Transactions** — Record income and expenses with category tagging, filtering, and search
 - **Dashboard** — At-a-glance summary with charts (fl_chart) showing balances, spending trends, and recent activity
 - **Categories** — 16 expense and 7 income parent categories with subcategories, seeded on first launch
+- **Bank Connectivity** — SimpleFIN integration with multi-login support, automatic account sync
+- **CSV Import** — Column mapping, preview, and import history
+- **Budgets** — Budget tracking with category-based spending limits
+- **Goals** — Financial goal tracking with progress monitoring
+- **Recurring Transactions** — Automatic detection of recurring income and expenses
 - **Data Export** — CSV export for accounts and transactions
 - **Material 3 Theming** — Dynamic color support with semantic finance colors (income=green, expense=red)
 - **Offline-First** — All data stored locally in SQLite via Drift ORM
@@ -63,7 +68,7 @@ flutter build apk --release
 |-------|--------|-------------|
 | Phase 1 — Foundation | Complete | Database, auth, theme, repositories, routing, settings |
 | Phase 2 — Accounts & Transactions | Complete | Accounts CRUD, transactions CRUD, dashboard, category picker |
-| Phase 3 — Bank Connectivity | Next | SimpleFIN integration, CSV/OFX import |
+| Phase 3 — Bank Connectivity | In Progress | SimpleFIN sync, CSV import, budgets, goals, recurring detection done. Remaining: auto-categorization UI, AI/LLM, Supabase sync, OFX import |
 
 ## Development Guidelines
 

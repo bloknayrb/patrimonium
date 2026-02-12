@@ -171,24 +171,40 @@ lib/
 │   ├── local/
 │   │   ├── database/       # Drift database (21 tables + generated code)
 │   │   └── secure_storage/ # flutter_secure_storage wrapper
+│   ├── remote/
+│   │   ├── dio_client.dart           # Shared Dio instance config
+│   │   └── simplefin/
+│   │       ├── simplefin_client.dart # SimpleFIN HTTP client (claim, fetch)
+│   │       └── simplefin_models.dart # SimpleFIN API DTOs
 │   └── repositories/       # AccountRepository, TransactionRepository,
-│                           # CategoryRepository, BudgetRepository
+│                           # CategoryRepository, BudgetRepository,
+│                           # BankConnectionRepository, GoalRepository,
+│                           # ImportRepository, RecurringTransactionRepository
 ├── domain/
 │   └── usecases/
 │       ├── auth/           # PinService, BiometricService
 │       ├── categories/     # CategorySeeder
-│       └── export/         # CsvExportService
+│       ├── export/         # CsvExportService
+│       ├── import/         # CsvImportService
+│       ├── recurring/      # RecurringDetectionService
+│       └── sync/           # SimplefinSyncService, BackgroundSyncManager
 ├── presentation/
 │   ├── features/
 │   │   ├── accounts/       # CRUD screens + accounts_providers.dart
 │   │   ├── auth/           # LockScreen, PinSetupScreen
+│   │   ├── bank_connections/ # SimpleFIN setup, connection list, account linking
+│   │   ├── budgets/        # Budget CRUD + budgets_providers.dart
 │   │   ├── dashboard/      # DashboardScreen (net worth, cash flow, etc.)
+│   │   ├── goals/          # Goal CRUD + goals_providers.dart
+│   │   ├── import/         # CSV import with column mapping, import history
+│   │   ├── recurring/      # Recurring transaction detection + management
 │   │   ├── transactions/   # CRUD screens + transactions_providers.dart
 │   │   ├── ai_assistant/   # AiAssistantScreen (stub — no LLM backend yet)
 │   │   ├── settings/       # SettingsScreen
 │   │   └── onboarding/     # OnboardingScreen (first-launch welcome)
 │   └── shared/
-│       ├── widgets/        # AppShell (bottom nav), PinNumberPad
+│       ├── widgets/        # AppShell, PinNumberPad, CategoryPickerSheet, DeleteConfirmationDialog
+│       ├── utils/          # SnackbarHelpers
 │       ├── loading/        # ShimmerLoading skeletons
 │       └── empty_states/   # EmptyStateWidget
 ├── app.dart                # Root MaterialApp, auto-lock lifecycle observer
@@ -240,6 +256,11 @@ GoRouter with `StatefulShellRoute.indexedStack` for 5-tab bottom navigation. Aut
 - PIN set + on setup page → redirect to `/lock`
 
 Route constants are in `AppRoutes` class. Full-screen routes: `/lock`, `/pin-setup`, `/pin-change`, `/onboarding`. Tab routes: `/dashboard`, `/accounts`, `/transactions`, `/ai`, `/settings`.
+
+Additional full-screen routes for Phase 3 features:
+- `/bank-connections`, `/simplefin-setup`, `/account-linking/:connectionId`, `/connection-detail/:connectionId`
+- `/import/csv`, `/import/history`
+- `/budgets`, `/goals`, `/recurring`
 
 The router is created via `createAppRouter(Ref ref)` (needs Ref for auth state checks).
 
@@ -300,14 +321,15 @@ Material 3 with `dynamic_color` support. Custom `FinanceColors` theme extension 
 | **Backend** | supabase_flutter (prepared, not yet wired) |
 | **Monitoring** | sentry_flutter (imported, init TODO) |
 | **Background** | workmanager |
+| **Connectivity** | connectivity_plus |
 | **Markdown** | flutter_markdown (for AI chat) |
-| **Testing** | mocktail (no tests written yet beyond placeholder) |
+| **Testing** | mocktail |
 
 Note: `riverpod_generator` and `riverpod_lint` are commented out in pubspec.yaml due to `analyzer_plugin` compatibility issues.
 
 ## Testing
 
-Test coverage is minimal. Only `test/widget_test.dart` exists with a placeholder smoke test. Repositories, providers, screens, PIN hashing, and CSV export all lack test coverage. `mocktail` is available as a dev dependency for writing tests.
+Test coverage is minimal. `test/widget_test.dart` has a placeholder smoke test and `test/unit/money_extensions_test.dart` covers money formatting extensions. Repositories, providers, screens, PIN hashing, and CSV export all lack test coverage. `mocktail` is available as a dev dependency for writing tests.
 
 ## Testing Guidelines
 
@@ -504,4 +526,6 @@ import 'package:patrimonium/data/repositories/account_repository.dart';
 
 - **Phase 1 (Foundation)**: Complete — database (21 tables), PIN auth with PBKDF2, biometric auth, Material 3 theme, secure storage, error handling, routing with auth redirects, settings screen, auto-lock
 - **Phase 2 (Accounts & Transactions)**: Complete — accounts CRUD (18 types), transactions CRUD with filtering/search, category hierarchy with seeding, dashboard (net worth, cash flow, budget health, recent transactions, AI insights cards), onboarding flow, CSV export, account detail with transaction history
-- **Phase 3 (Bank Connectivity & Data Import)**: Next up — SimpleFIN integration, CSV/OFX import, auto-categorization rules engine, budget management, recurring transaction detection, goals tracking, investment holdings, AI assistant LLM integration, insights generation, Supabase sync
+- **Phase 3 (Bank Connectivity & Data Import)**: In progress
+  - **Complete**: SimpleFIN client + sync service, bank connections UI (setup, linking, detail), CSV import with column mapping and preview, recurring transaction detection, budget management screens, goal tracking screens, background sync manager scaffolding, investment holdings sync via SimpleFIN
+  - **Remaining**: Auto-categorization rules UI, AI/LLM assistant integration, Supabase sync, OFX import

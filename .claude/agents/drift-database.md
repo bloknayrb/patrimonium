@@ -66,6 +66,10 @@ Repositories in `lib/data/repositories/` wrap Drift queries:
 - `TransactionRepository` — CRUD + filters, date ranges, watchRecentTransactions()
 - `CategoryRepository` — hierarchy (parent/child), watchExpenseCategories(), watchIncomeCategories()
 - `BudgetRepository` — budget management
+- `BankConnectionRepository` — SimpleFIN connection CRUD + sync status tracking
+- `GoalRepository` — financial goal CRUD + progress tracking
+- `ImportRepository` — CSV import history tracking
+- `RecurringTransactionRepository` — recurring transaction CRUD + detection results
 
 Repositories expose `Stream<T>` via `.watch()` for reactive UI updates and `Future<T>` via `.get()` for one-shot reads.
 
