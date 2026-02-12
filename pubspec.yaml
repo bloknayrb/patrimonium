@@ -52,13 +52,13 @@ dependencies:
   supabase_flutter: ^2.8.3
 
   # Crash Reporting
-  sentry_flutter: ^8.14.2
+  sentry_flutter: ^9.12.0
 
   # Connectivity
   connectivity_plus: ^6.1.2
 
   # Background Work
-  workmanager: ^0.5.2
+  workmanager: ^0.9.0
 
   # Markdown Rendering (for AI chat)
   flutter_markdown: ^0.7.6
