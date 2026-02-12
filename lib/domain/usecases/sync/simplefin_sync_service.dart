@@ -53,7 +53,8 @@ class ConnectionStatus {
 /// Orchestrates SimpleFIN bank sync operations.
 ///
 /// Handles token claiming, account syncing, rate limiting,
-/// and circuit breaker logic.
+/// and circuit breaker logic. Circuit breaker state is persisted
+/// in the database to survive app restarts.
 class SimplefinSyncService {
   SimplefinSyncService({
     required SimplefinClient simplefinClient,
@@ -75,10 +76,6 @@ class SimplefinSyncService {
   final AccountRepository _accountRepo;
   final TransactionRepository _transactionRepo;
   final ImportRepository _importRepo;
-
-  /// Tracks consecutive sync failures for circuit breaker.
-  int _consecutiveFailures = 0;
-  DateTime? _lastFailureTime;
 
   static const _uuid = Uuid();
 
@@ -134,14 +131,24 @@ class SimplefinSyncService {
 
   /// Sync a connection's accounts and transactions.
   ///
-  /// Returns a [SyncResult] with counts and status.
+  /// Uses a database-level sync lock to prevent concurrent syncs
+  /// across isolates. Circuit breaker state is persisted in DB.
   Future<SyncResult> syncConnection(String connectionId) async {
-    // Check rate limiting
+    // Check rate limiting / circuit breaker
     if (!await canSync(connectionId)) {
       return SyncResult(
         connectionId: connectionId,
         rateLimited: true,
         errorMessage: 'Rate limited. Please wait before syncing again.',
+      );
+    }
+
+    // Acquire sync lock (atomic check-and-set in DB)
+    final acquired = await _connectionRepo.tryAcquireSyncLock(connectionId);
+    if (!acquired) {
+      return SyncResult(
+        connectionId: connectionId,
+        errorMessage: 'Sync already in progress for this connection.',
       );
     }
 
@@ -285,9 +292,12 @@ class SimplefinSyncService {
         createdAt: nowMillis,
       ));
 
-      // Reset failure counter on success
-      _consecutiveFailures = 0;
-      _lastFailureTime = null;
+      // Reset circuit breaker on success
+      await _connectionRepo.updateCircuitBreakerState(
+        connectionId,
+        consecutiveFailures: 0,
+        lastFailureTime: null,
+      );
 
       return SyncResult(
         connectionId: connectionId,
@@ -296,7 +306,7 @@ class SimplefinSyncService {
         transactionsSkipped: transactionsSkipped,
       );
     } on SimplefinApiException catch (e) {
-      _recordFailure();
+      await _recordFailure(connectionId);
       final errorMsg = e.message;
       await _connectionRepo.updateStatus(
         connectionId,
@@ -308,7 +318,7 @@ class SimplefinSyncService {
         errorMessage: errorMsg,
       );
     } catch (e) {
-      _recordFailure();
+      await _recordFailure(connectionId);
       final errorMsg = e is AppError ? e.message : e.toString();
       await _connectionRepo.updateStatus(
         connectionId,
@@ -319,17 +329,24 @@ class SimplefinSyncService {
         connectionId: connectionId,
         errorMessage: errorMsg,
       );
+    } finally {
+      // Always release sync lock
+      await _connectionRepo.releaseSyncLock(connectionId);
     }
   }
 
   /// Check if a sync is allowed (rate limiting + circuit breaker).
   Future<bool> canSync(String connectionId) async {
-    // Check circuit breaker
-    if (_consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures) {
-      final backoff = _getBackoffDuration();
-      if (_lastFailureTime != null &&
-          DateTime.now().difference(_lastFailureTime!) < backoff) {
-        return false;
+    // Check circuit breaker (persisted in DB)
+    final cb = await _connectionRepo.getCircuitBreakerState(connectionId);
+    if (cb.consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures) {
+      final backoff = _getBackoffDuration(cb.consecutiveFailures);
+      if (cb.lastFailureTime != null) {
+        final lastFailure =
+            DateTime.fromMillisecondsSinceEpoch(cb.lastFailureTime!);
+        if (DateTime.now().difference(lastFailure) < backoff) {
+          return false;
+        }
       }
       // Backoff period elapsed, allow retry
     }
@@ -363,11 +380,14 @@ class SimplefinSyncService {
 
   /// Get the time until the next sync is allowed.
   Future<Duration?> timeUntilNextSync(String connectionId) async {
-    // Check circuit breaker first
-    if (_consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures &&
-        _lastFailureTime != null) {
-      final backoff = _getBackoffDuration();
-      final elapsed = DateTime.now().difference(_lastFailureTime!);
+    // Check circuit breaker first (persisted in DB)
+    final cb = await _connectionRepo.getCircuitBreakerState(connectionId);
+    if (cb.consecutiveFailures >= AppConstants.maxConsecutiveSyncFailures &&
+        cb.lastFailureTime != null) {
+      final backoff = _getBackoffDuration(cb.consecutiveFailures);
+      final lastFailure =
+          DateTime.fromMillisecondsSinceEpoch(cb.lastFailureTime!);
+      final elapsed = DateTime.now().difference(lastFailure);
       if (elapsed < backoff) {
         return backoff - elapsed;
       }
@@ -411,14 +431,19 @@ class SimplefinSyncService {
     );
   }
 
-  void _recordFailure() {
-    _consecutiveFailures++;
-    _lastFailureTime = DateTime.now();
+  /// Record a failure in the circuit breaker (persisted to DB).
+  Future<void> _recordFailure(String connectionId) async {
+    final cb = await _connectionRepo.getCircuitBreakerState(connectionId);
+    await _connectionRepo.updateCircuitBreakerState(
+      connectionId,
+      consecutiveFailures: cb.consecutiveFailures + 1,
+      lastFailureTime: DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   /// Exponential backoff: 5min, 30min, 2hr.
-  Duration _getBackoffDuration() {
-    return switch (_consecutiveFailures) {
+  Duration _getBackoffDuration(int failures) {
+    return switch (failures) {
       <= 3 => const Duration(minutes: 5),
       <= 5 => const Duration(minutes: 30),
       _ => const Duration(hours: 2),

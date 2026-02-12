@@ -1,0 +1,82 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/extensions/money_extensions.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../data/local/database/app_database.dart';
+import '../add_edit_transaction_screen.dart';
+
+class TransactionTile extends StatelessWidget {
+  final Transaction transaction;
+  final String? categoryName;
+
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    this.categoryName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final finance = theme.finance;
+    final isIncome = transaction.amountCents > 0;
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: isIncome
+            ? finance.income.withValues(alpha: 0.15)
+            : colorScheme.errorContainer,
+        child: Icon(
+          isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+          color: isIncome ? finance.income : colorScheme.error,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        transaction.payee,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        categoryName ?? (transaction.categoryId == null ? 'Uncategorized' : ''),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: transaction.categoryId == null
+              ? colorScheme.error.withValues(alpha: 0.7)
+              : colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            transaction.amountCents.toCurrency(),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: isIncome ? finance.income : colorScheme.onSurface,
+            ),
+          ),
+          if (transaction.isPending)
+            Text(
+              'Pending',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+        ],
+      ),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AddEditTransactionScreen(transaction: transaction),
+          ),
+        );
+      },
+    );
+  }
+}

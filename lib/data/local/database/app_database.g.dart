@@ -6026,6 +6026,43 @@ class $BankConnectionsTable extends BankConnections
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _consecutiveFailuresMeta =
+      const VerificationMeta('consecutiveFailures');
+  @override
+  late final GeneratedColumn<int> consecutiveFailures = GeneratedColumn<int>(
+    'consecutive_failures',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastFailureTimeMeta = const VerificationMeta(
+    'lastFailureTime',
+  );
+  @override
+  late final GeneratedColumn<int> lastFailureTime = GeneratedColumn<int>(
+    'last_failure_time',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isSyncingMeta = const VerificationMeta(
+    'isSyncing',
+  );
+  @override
+  late final GeneratedColumn<bool> isSyncing = GeneratedColumn<bool>(
+    'is_syncing',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_syncing" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -6056,6 +6093,9 @@ class $BankConnectionsTable extends BankConnections
     status,
     lastSyncedAt,
     errorMessage,
+    consecutiveFailures,
+    lastFailureTime,
+    isSyncing,
     createdAt,
     updatedAt,
   ];
@@ -6121,6 +6161,30 @@ class $BankConnectionsTable extends BankConnections
         ),
       );
     }
+    if (data.containsKey('consecutive_failures')) {
+      context.handle(
+        _consecutiveFailuresMeta,
+        consecutiveFailures.isAcceptableOrUnknown(
+          data['consecutive_failures']!,
+          _consecutiveFailuresMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_failure_time')) {
+      context.handle(
+        _lastFailureTimeMeta,
+        lastFailureTime.isAcceptableOrUnknown(
+          data['last_failure_time']!,
+          _lastFailureTimeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_syncing')) {
+      context.handle(
+        _isSyncingMeta,
+        isSyncing.isAcceptableOrUnknown(data['is_syncing']!, _isSyncingMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -6170,6 +6234,18 @@ class $BankConnectionsTable extends BankConnections
         DriftSqlType.string,
         data['${effectivePrefix}error_message'],
       ),
+      consecutiveFailures: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}consecutive_failures'],
+      )!,
+      lastFailureTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_failure_time'],
+      ),
+      isSyncing: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_syncing'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -6194,6 +6270,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
   final String status;
   final int? lastSyncedAt;
   final String? errorMessage;
+  final int consecutiveFailures;
+  final int? lastFailureTime;
+  final bool isSyncing;
   final int createdAt;
   final int updatedAt;
   const BankConnection({
@@ -6203,6 +6282,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
     required this.status,
     this.lastSyncedAt,
     this.errorMessage,
+    required this.consecutiveFailures,
+    this.lastFailureTime,
+    required this.isSyncing,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -6219,6 +6301,11 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
     if (!nullToAbsent || errorMessage != null) {
       map['error_message'] = Variable<String>(errorMessage);
     }
+    map['consecutive_failures'] = Variable<int>(consecutiveFailures);
+    if (!nullToAbsent || lastFailureTime != null) {
+      map['last_failure_time'] = Variable<int>(lastFailureTime);
+    }
+    map['is_syncing'] = Variable<bool>(isSyncing);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
@@ -6236,6 +6323,11 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
       errorMessage: errorMessage == null && nullToAbsent
           ? const Value.absent()
           : Value(errorMessage),
+      consecutiveFailures: Value(consecutiveFailures),
+      lastFailureTime: lastFailureTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastFailureTime),
+      isSyncing: Value(isSyncing),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -6253,6 +6345,11 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
       status: serializer.fromJson<String>(json['status']),
       lastSyncedAt: serializer.fromJson<int?>(json['lastSyncedAt']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      consecutiveFailures: serializer.fromJson<int>(
+        json['consecutiveFailures'],
+      ),
+      lastFailureTime: serializer.fromJson<int?>(json['lastFailureTime']),
+      isSyncing: serializer.fromJson<bool>(json['isSyncing']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
@@ -6267,6 +6364,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
       'status': serializer.toJson<String>(status),
       'lastSyncedAt': serializer.toJson<int?>(lastSyncedAt),
       'errorMessage': serializer.toJson<String?>(errorMessage),
+      'consecutiveFailures': serializer.toJson<int>(consecutiveFailures),
+      'lastFailureTime': serializer.toJson<int?>(lastFailureTime),
+      'isSyncing': serializer.toJson<bool>(isSyncing),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
@@ -6279,6 +6379,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
     String? status,
     Value<int?> lastSyncedAt = const Value.absent(),
     Value<String?> errorMessage = const Value.absent(),
+    int? consecutiveFailures,
+    Value<int?> lastFailureTime = const Value.absent(),
+    bool? isSyncing,
     int? createdAt,
     int? updatedAt,
   }) => BankConnection(
@@ -6288,6 +6391,11 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
     status: status ?? this.status,
     lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    consecutiveFailures: consecutiveFailures ?? this.consecutiveFailures,
+    lastFailureTime: lastFailureTime.present
+        ? lastFailureTime.value
+        : this.lastFailureTime,
+    isSyncing: isSyncing ?? this.isSyncing,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -6305,6 +6413,13 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
       errorMessage: data.errorMessage.present
           ? data.errorMessage.value
           : this.errorMessage,
+      consecutiveFailures: data.consecutiveFailures.present
+          ? data.consecutiveFailures.value
+          : this.consecutiveFailures,
+      lastFailureTime: data.lastFailureTime.present
+          ? data.lastFailureTime.value
+          : this.lastFailureTime,
+      isSyncing: data.isSyncing.present ? data.isSyncing.value : this.isSyncing,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -6319,6 +6434,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
           ..write('status: $status, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('errorMessage: $errorMessage, ')
+          ..write('consecutiveFailures: $consecutiveFailures, ')
+          ..write('lastFailureTime: $lastFailureTime, ')
+          ..write('isSyncing: $isSyncing, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -6333,6 +6451,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
     status,
     lastSyncedAt,
     errorMessage,
+    consecutiveFailures,
+    lastFailureTime,
+    isSyncing,
     createdAt,
     updatedAt,
   );
@@ -6346,6 +6467,9 @@ class BankConnection extends DataClass implements Insertable<BankConnection> {
           other.status == this.status &&
           other.lastSyncedAt == this.lastSyncedAt &&
           other.errorMessage == this.errorMessage &&
+          other.consecutiveFailures == this.consecutiveFailures &&
+          other.lastFailureTime == this.lastFailureTime &&
+          other.isSyncing == this.isSyncing &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -6357,6 +6481,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
   final Value<String> status;
   final Value<int?> lastSyncedAt;
   final Value<String?> errorMessage;
+  final Value<int> consecutiveFailures;
+  final Value<int?> lastFailureTime;
+  final Value<bool> isSyncing;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> rowid;
@@ -6367,6 +6494,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
     this.status = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.errorMessage = const Value.absent(),
+    this.consecutiveFailures = const Value.absent(),
+    this.lastFailureTime = const Value.absent(),
+    this.isSyncing = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -6378,6 +6508,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
     required String status,
     this.lastSyncedAt = const Value.absent(),
     this.errorMessage = const Value.absent(),
+    this.consecutiveFailures = const Value.absent(),
+    this.lastFailureTime = const Value.absent(),
+    this.isSyncing = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.rowid = const Value.absent(),
@@ -6394,6 +6527,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
     Expression<String>? status,
     Expression<int>? lastSyncedAt,
     Expression<String>? errorMessage,
+    Expression<int>? consecutiveFailures,
+    Expression<int>? lastFailureTime,
+    Expression<bool>? isSyncing,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? rowid,
@@ -6405,6 +6541,10 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
       if (status != null) 'status': status,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (errorMessage != null) 'error_message': errorMessage,
+      if (consecutiveFailures != null)
+        'consecutive_failures': consecutiveFailures,
+      if (lastFailureTime != null) 'last_failure_time': lastFailureTime,
+      if (isSyncing != null) 'is_syncing': isSyncing,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -6418,6 +6558,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
     Value<String>? status,
     Value<int?>? lastSyncedAt,
     Value<String?>? errorMessage,
+    Value<int>? consecutiveFailures,
+    Value<int?>? lastFailureTime,
+    Value<bool>? isSyncing,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? rowid,
@@ -6429,6 +6572,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
       status: status ?? this.status,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       errorMessage: errorMessage ?? this.errorMessage,
+      consecutiveFailures: consecutiveFailures ?? this.consecutiveFailures,
+      lastFailureTime: lastFailureTime ?? this.lastFailureTime,
+      isSyncing: isSyncing ?? this.isSyncing,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -6456,6 +6602,15 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
     if (errorMessage.present) {
       map['error_message'] = Variable<String>(errorMessage.value);
     }
+    if (consecutiveFailures.present) {
+      map['consecutive_failures'] = Variable<int>(consecutiveFailures.value);
+    }
+    if (lastFailureTime.present) {
+      map['last_failure_time'] = Variable<int>(lastFailureTime.value);
+    }
+    if (isSyncing.present) {
+      map['is_syncing'] = Variable<bool>(isSyncing.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -6477,6 +6632,9 @@ class BankConnectionsCompanion extends UpdateCompanion<BankConnection> {
           ..write('status: $status, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('errorMessage: $errorMessage, ')
+          ..write('consecutiveFailures: $consecutiveFailures, ')
+          ..write('lastFailureTime: $lastFailureTime, ')
+          ..write('isSyncing: $isSyncing, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -15165,6 +15323,9 @@ typedef $$BankConnectionsTableCreateCompanionBuilder =
       required String status,
       Value<int?> lastSyncedAt,
       Value<String?> errorMessage,
+      Value<int> consecutiveFailures,
+      Value<int?> lastFailureTime,
+      Value<bool> isSyncing,
       required int createdAt,
       required int updatedAt,
       Value<int> rowid,
@@ -15177,6 +15338,9 @@ typedef $$BankConnectionsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<int?> lastSyncedAt,
       Value<String?> errorMessage,
+      Value<int> consecutiveFailures,
+      Value<int?> lastFailureTime,
+      Value<bool> isSyncing,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> rowid,
@@ -15218,6 +15382,21 @@ class $$BankConnectionsTableFilterComposer
 
   ColumnFilters<String> get errorMessage => $composableBuilder(
     column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get consecutiveFailures => $composableBuilder(
+    column: $table.consecutiveFailures,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastFailureTime => $composableBuilder(
+    column: $table.lastFailureTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSyncing => $composableBuilder(
+    column: $table.isSyncing,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15271,6 +15450,21 @@ class $$BankConnectionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get consecutiveFailures => $composableBuilder(
+    column: $table.consecutiveFailures,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastFailureTime => $composableBuilder(
+    column: $table.lastFailureTime,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSyncing => $composableBuilder(
+    column: $table.isSyncing,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -15314,6 +15508,19 @@ class $$BankConnectionsTableAnnotationComposer
     column: $table.errorMessage,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get consecutiveFailures => $composableBuilder(
+    column: $table.consecutiveFailures,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastFailureTime => $composableBuilder(
+    column: $table.lastFailureTime,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSyncing =>
+      $composableBuilder(column: $table.isSyncing, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15365,6 +15572,9 @@ class $$BankConnectionsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<int?> lastSyncedAt = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
+                Value<int> consecutiveFailures = const Value.absent(),
+                Value<int?> lastFailureTime = const Value.absent(),
+                Value<bool> isSyncing = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -15375,6 +15585,9 @@ class $$BankConnectionsTableTableManager
                 status: status,
                 lastSyncedAt: lastSyncedAt,
                 errorMessage: errorMessage,
+                consecutiveFailures: consecutiveFailures,
+                lastFailureTime: lastFailureTime,
+                isSyncing: isSyncing,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -15387,6 +15600,9 @@ class $$BankConnectionsTableTableManager
                 required String status,
                 Value<int?> lastSyncedAt = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
+                Value<int> consecutiveFailures = const Value.absent(),
+                Value<int?> lastFailureTime = const Value.absent(),
+                Value<bool> isSyncing = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -15397,6 +15613,9 @@ class $$BankConnectionsTableTableManager
                 status: status,
                 lastSyncedAt: lastSyncedAt,
                 errorMessage: errorMessage,
+                consecutiveFailures: consecutiveFailures,
+                lastFailureTime: lastFailureTime,
+                isSyncing: isSyncing,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

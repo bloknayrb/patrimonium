@@ -8,7 +8,7 @@ import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
 import '../accounts/accounts_providers.dart';
-import 'goals_screen.dart';
+import 'widgets/goal_appearance_section.dart';
 
 /// Goal type options: (value, label).
 const goalTypes = [
@@ -206,8 +206,6 @@ class _AddEditGoalScreenState extends ConsumerState<AddEditGoalScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsProvider);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -371,79 +369,14 @@ class _AddEditGoalScreenState extends ConsumerState<AddEditGoalScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Icon picker
-            Text('Icon', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: goalIconOptions.map((option) {
-                final isSelected = option.$1 == _selectedIcon;
-                return InkWell(
-                  onTap: _isSaving
-                      ? null
-                      : () => setState(() => _selectedIcon = option.$1),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? colorScheme.primaryContainer
-                          : colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                      border: isSelected
-                          ? Border.all(color: colorScheme.primary, width: 2)
-                          : null,
-                    ),
-                    child: Icon(
-                      option.$2,
-                      color: isSelected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // Color picker
-            Text('Color', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: goalColorOptions.map((color) {
-                final isSelected = color.toARGB32() == _selectedColor.toARGB32();
-                return InkWell(
-                  onTap: _isSaving
-                      ? null
-                      : () => setState(() => _selectedColor = color),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(
-                              color: colorScheme.onSurface, width: 3)
-                          : null,
-                    ),
-                    child: isSelected
-                        ? Icon(Icons.check,
-                            color: ThemeData.estimateBrightnessForColor(color) ==
-                                    Brightness.dark
-                                ? Colors.white
-                                : Colors.black,
-                            size: 20)
-                        : null,
-                  ),
-                );
-              }).toList(),
+            GoalAppearanceSection(
+              selectedIcon: _selectedIcon,
+              selectedColor: _selectedColor,
+              enabled: !_isSaving,
+              onIconChanged: (icon) =>
+                  setState(() => _selectedIcon = icon),
+              onColorChanged: (color) =>
+                  setState(() => _selectedColor = color),
             ),
             const SizedBox(height: 32),
 

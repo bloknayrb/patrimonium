@@ -169,6 +169,11 @@ class BankConnections extends Table {
   TextColumn get status => text()();
   IntColumn get lastSyncedAt => integer().nullable()();
   TextColumn get errorMessage => text().nullable()();
+  IntColumn get consecutiveFailures =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get lastFailureTime => integer().nullable()();
+  BoolColumn get isSyncing =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
 
@@ -396,7 +401,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -414,6 +419,61 @@ class AppDatabase extends _$AppDatabase {
           // v1 → v2: Add bankConnectionId to ImportHistory
           if (from < 2) {
             await m.addColumn(importHistory, importHistory.bankConnectionId);
+          }
+
+          // v2 → v3: Add indexes and circuit breaker columns
+          if (from < 3) {
+            // New columns on bank_connections
+            await customStatement(
+              'ALTER TABLE bank_connections ADD COLUMN consecutive_failures INTEGER NOT NULL DEFAULT 0',
+            );
+            await customStatement(
+              'ALTER TABLE bank_connections ADD COLUMN last_failure_time INTEGER',
+            );
+            await customStatement(
+              'ALTER TABLE bank_connections ADD COLUMN is_syncing INTEGER NOT NULL DEFAULT 0',
+            );
+
+            // Indexes
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions (account_id, date)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions (category_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions (external_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_transactions_is_reviewed ON transactions (is_reviewed)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories (parent_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_categories_type ON categories (type)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_budgets_category ON budgets (category_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_budgets_end_date ON budgets (end_date)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_goals_linked_account ON goals (linked_account_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_goals_is_completed ON goals (is_completed)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_recurring_account ON recurring_transactions (account_id)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_recurring_is_active ON recurring_transactions (is_active)',
+            );
+            await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_accounts_bank_connection ON accounts (bank_connection_id)',
+            );
           }
         },
         beforeOpen: (details) async {

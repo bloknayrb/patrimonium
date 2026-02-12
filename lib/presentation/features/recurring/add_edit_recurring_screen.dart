@@ -9,6 +9,7 @@ import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/widgets/category_picker_sheet.dart';
 import '../accounts/accounts_providers.dart';
+import 'widgets/recurring_account_category_section.dart';
 
 /// Frequency options for the dropdown.
 const _frequencies = [
@@ -236,8 +237,6 @@ class _AddEditRecurringScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final accountsAsync = ref.watch(accountsProvider);
 
     // Resolve category name if editing and not yet set.
@@ -366,7 +365,7 @@ class _AddEditRecurringScreenState
             ),
             const Divider(),
 
-            // Account
+            // Account & Category
             accountsAsync.when(
               loading: () => const ListTile(
                 leading: Icon(Icons.account_balance),
@@ -377,52 +376,19 @@ class _AddEditRecurringScreenState
                 title: Text('Error loading accounts'),
               ),
               data: (accounts) {
-                if (accounts.isEmpty) {
-                  return ListTile(
-                    leading: const Icon(Icons.warning),
-                    title: const Text('No accounts'),
-                    subtitle: const Text('Create an account first'),
-                    tileColor:
-                        colorScheme.errorContainer.withValues(alpha: 0.3),
-                  );
-                }
+                _selectedAccountId ??= accounts.isNotEmpty ? accounts.first.id : null;
 
-                _selectedAccountId ??= accounts.first.id;
-
-                return DropdownButtonFormField<String>(
-                  initialValue: _selectedAccountId,
-                  decoration: const InputDecoration(
-                    labelText: 'Account *',
-                    filled: true,
-                  ),
-                  items: accounts.map((a) {
-                    return DropdownMenuItem(
-                      value: a.id,
-                      child: Text(a.name),
-                    );
-                  }).toList(),
-                  onChanged: _isSaving
-                      ? null
-                      : (v) => setState(() => _selectedAccountId = v),
-                  validator: (v) => v == null ? 'Select an account' : null,
+                return RecurringAccountCategorySection(
+                  accounts: accounts,
+                  selectedAccountId: _selectedAccountId,
+                  selectedCategoryName: _selectedCategoryName,
+                  selectedCategoryId: _selectedCategoryId,
+                  enabled: !_isSaving,
+                  onAccountChanged: (v) =>
+                      setState(() => _selectedAccountId = v),
+                  onCategoryTap: _showCategoryPicker,
                 );
               },
-            ),
-            const SizedBox(height: 16),
-
-            // Category
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.category),
-              title: const Text('Category'),
-              subtitle: Text(
-                _selectedCategoryName ?? 'Uncategorized',
-                style: _selectedCategoryId == null
-                    ? TextStyle(color: colorScheme.onSurfaceVariant)
-                    : null,
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _isSaving ? null : _showCategoryPicker,
             ),
             const Divider(),
 
