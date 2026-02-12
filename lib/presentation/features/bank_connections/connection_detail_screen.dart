@@ -40,7 +40,7 @@ class ConnectionDetailScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _SectionTitle(title: 'Connection Info'),
+              const _SectionTitle(title: 'Connection Info'),
               _InfoRow('Institution', connection.institutionName),
               _InfoRow('Provider', connection.provider),
               _InfoRow('Status', connection.status),
@@ -74,7 +74,7 @@ class ConnectionDetailScreen extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              _SectionTitle(title: 'Linked Accounts'),
+              const _SectionTitle(title: 'Linked Accounts'),
               linkedAsync.when(
                 loading: () => const Padding(
                     padding: EdgeInsets.all(16),
@@ -102,7 +102,7 @@ class ConnectionDetailScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 20),
-              _SectionTitle(title: 'Sync History'),
+              const _SectionTitle(title: 'Sync History'),
               historyAsync.when(
                 loading: () => const Padding(
                     padding: EdgeInsets.all(16),
@@ -120,7 +120,7 @@ class ConnectionDetailScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 20),
-              _SectionTitle(title: 'Actions'),
+              const _SectionTitle(title: 'Actions'),
               const SizedBox(height: 8),
               Row(
                 children: [

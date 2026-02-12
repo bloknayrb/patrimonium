@@ -24,7 +24,7 @@ class BackgroundSyncManager {
   }) async {
     if (_registered) return;
 
-    final interval = Duration(
+    const interval = Duration(
       hours: AppConstants.backgroundSyncIntervalHours,
     );
 
