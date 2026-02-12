@@ -15,10 +15,16 @@ The app uses **manual Riverpod providers** (NOT riverpod_generator — it confli
 
 1. `databaseProvider` — created in `main.dart` via `AppDatabase.open()`, overridden in `ProviderScope`
 2. Repository providers in `core/di/providers.dart` — depend on `databaseProvider`
-3. App state providers in `core/di/providers.dart` — `themeModeProvider`, `appRouterProvider`, `isUnlockedProvider`, `lastPausedAtProvider`
-4. Shared data providers in `core/di/providers.dart` — `allCategoriesProvider`, `expenseCategoriesProvider`, `incomeCategoriesProvider`
-5. Feature providers in each feature's `*_providers.dart` — depend on repository providers
-6. Screens consume feature providers via `ref.watch()`
+   - Core: `accountRepositoryProvider`, `transactionRepositoryProvider`, `categoryRepositoryProvider`, `budgetRepositoryProvider`
+   - Phase 3: `bankConnectionRepositoryProvider`, `goalRepositoryProvider`, `importRepositoryProvider`, `recurringTransactionRepositoryProvider`
+3. Service providers in `core/di/providers.dart` — depend on repositories + external clients
+   - `simplefinClientProvider` → depends on Dio
+   - `simplefinSyncServiceProvider` → depends on SimpleFIN client + repositories + secure storage
+   - `backgroundSyncManagerProvider` → depends on sync service
+4. App state providers in `core/di/providers.dart` — `themeModeProvider`, `appRouterProvider`, `isUnlockedProvider`, `lastPausedAtProvider`
+5. Shared data providers in `core/di/providers.dart` — `allCategoriesProvider`, `expenseCategoriesProvider`, `incomeCategoriesProvider`
+6. Feature providers in each feature's `*_providers.dart` — depend on repository/service providers
+7. Screens consume feature providers via `ref.watch()`
 
 ### Provider Location Rules
 

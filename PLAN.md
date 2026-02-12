@@ -1,3 +1,20 @@
+# Implementation Status
+
+| Feature | Status |
+|---------|--------|
+| SimpleFIN multi-login | Implemented |
+| CSV Import (column mapping + preview) | Implemented |
+| OFX Import | Planned |
+| Recurring transaction detection | Implemented |
+| Budget management screens | Implemented |
+| Goal tracking screens | Implemented |
+| Investment holdings (via SimpleFIN sync) | Implemented |
+| Auto-categorization rules UI | Planned |
+| AI/LLM integration | Planned |
+| Supabase sync | Planned |
+
+---
+
 # Plan: Multi-Login Same Bank Support (SimpleFIN)
 
 ## Problem
