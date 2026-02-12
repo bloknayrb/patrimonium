@@ -198,9 +198,9 @@ class SettingsScreen extends ConsumerWidget {
 
           // About
           const _SectionHeader(title: 'About'),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text(AppConstants.appName),
+          const ListTile(
+            leading: Icon(Icons.info_outline),
+            title: Text(AppConstants.appName),
             subtitle: Text('Version ${AppConstants.appVersion}'),
           ),
           ListTile(

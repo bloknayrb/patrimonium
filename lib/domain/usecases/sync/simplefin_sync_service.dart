@@ -380,7 +380,7 @@ class SimplefinSyncService {
           DateTime.fromMillisecondsSinceEpoch(connection!.lastSyncedAt!);
       final elapsed = DateTime.now().difference(lastSync);
       final minInterval =
-          Duration(minutes: AppConstants.minSyncIntervalMinutes);
+          const Duration(minutes: AppConstants.minSyncIntervalMinutes);
       if (elapsed < minInterval) {
         return minInterval - elapsed;
       }
