@@ -14,6 +14,11 @@ import '../../presentation/features/bank_connections/simplefin_setup_screen.dart
 import '../../presentation/features/bank_connections/account_linking_screen.dart';
 import '../../presentation/features/bank_connections/bank_connections_screen.dart';
 import '../../presentation/features/bank_connections/connection_detail_screen.dart';
+import '../../presentation/features/budgets/budgets_screen.dart';
+import '../../presentation/features/goals/goals_screen.dart';
+import '../../presentation/features/recurring/recurring_screen.dart';
+import '../../presentation/features/import/csv_import_screen.dart';
+import '../../presentation/features/import/import_history_screen.dart';
 import '../../presentation/shared/widgets/app_shell.dart';
 import '../di/providers.dart';
 
@@ -34,6 +39,11 @@ class AppRoutes {
   static const String simplefinSetup = '/simplefin-setup';
   static const String accountLinking = '/account-linking';
   static const String connectionDetail = '/connection-detail';
+  static const String budgets = '/budgets';
+  static const String goals = '/goals';
+  static const String recurring = '/recurring';
+  static const String csvImport = '/import/csv';
+  static const String importHistory = '/import/history';
 }
 
 /// Navigator keys for each tab branch.
@@ -124,6 +134,41 @@ GoRouter createAppRouter(Ref ref) {
           final connectionId = state.pathParameters['connectionId']!;
           return ConnectionDetailScreen(connectionId: connectionId);
         },
+      ),
+
+      // Budgets (full-screen)
+      GoRoute(
+        path: AppRoutes.budgets,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const BudgetsScreen(),
+      ),
+
+      // Goals (full-screen)
+      GoRoute(
+        path: AppRoutes.goals,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const GoalsScreen(),
+      ),
+
+      // Recurring transactions (full-screen)
+      GoRoute(
+        path: AppRoutes.recurring,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const RecurringScreen(),
+      ),
+
+      // CSV import (full-screen)
+      GoRoute(
+        path: AppRoutes.csvImport,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CsvImportScreen(),
+      ),
+
+      // Import history (full-screen)
+      GoRoute(
+        path: AppRoutes.importHistory,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ImportHistoryScreen(),
       ),
 
       // Main app with bottom navigation

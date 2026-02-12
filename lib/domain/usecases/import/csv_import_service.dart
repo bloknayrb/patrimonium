@@ -308,7 +308,7 @@ class CsvImportService {
       fileName: preview.fileName,
       rowCount: preview.totalRows,
       importedCount: importedCount,
-      skippedCount: skippedCount + preview.errors.length,
+      skippedCount: skippedCount,
       status: status,
       errorMessage: errorMessage != null ? Value(errorMessage) : const Value(null),
       createdAt: now,

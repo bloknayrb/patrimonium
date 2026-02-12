@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:workmanager/workmanager.dart';
@@ -25,7 +26,11 @@ Future<void> main() async {
   // Seed default categories if this is a fresh install
   final categoryRepo = CategoryRepository(database);
   final seeder = CategorySeeder(categoryRepo);
-  await seeder.seedIfEmpty();
+  try {
+    await seeder.seedIfEmpty();
+  } catch (e) {
+    if (kDebugMode) debugPrint('Category seeding failed: $e');
+  }
 
   // TODO: Initialize Sentry
   // await SentryFlutter.init(

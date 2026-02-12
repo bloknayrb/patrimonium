@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../../../data/local/secure_storage/secure_storage_service.dart';
@@ -53,8 +54,8 @@ class BiometricService {
           biometricOnly: true,
         ),
       );
-    } catch (_) {
-      // Authentication failed or was cancelled
+    } catch (e) {
+      if (kDebugMode) debugPrint('Biometric auth failed: $e');
       return false;
     }
   }

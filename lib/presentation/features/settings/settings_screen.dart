@@ -51,6 +51,32 @@ class SettingsScreen extends ConsumerWidget {
 
           const Divider(),
 
+          // Financial Planning
+          const _SectionHeader(title: 'Financial Planning'),
+          ListTile(
+            leading: const Icon(Icons.pie_chart_outline),
+            title: const Text('Budgets'),
+            subtitle: const Text('Track spending by category'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.budgets),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('Goals'),
+            subtitle: const Text('Savings and debt payoff targets'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.goals),
+          ),
+          ListTile(
+            leading: const Icon(Icons.repeat),
+            title: const Text('Recurring Transactions'),
+            subtitle: const Text('Subscriptions and regular payments'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(AppRoutes.recurring),
+          ),
+
+          const Divider(),
+
           // Categories
           const _SectionHeader(title: 'Categories & Rules'),
           ListTile(
@@ -149,9 +175,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Import Data'),
             subtitle: const Text('CSV, Mint, YNAB, Monarch'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              _showComingSoon(context, 'Data import');
-            },
+            onTap: () => context.push(AppRoutes.csvImport),
           ),
           ListTile(
             leading: const Icon(Icons.file_download),
