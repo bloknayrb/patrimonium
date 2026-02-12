@@ -11527,6 +11527,17 @@ class $ImportHistoryTable extends ImportHistory
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _bankConnectionIdMeta = const VerificationMeta(
+    'bankConnectionId',
+  );
+  @override
+  late final GeneratedColumn<String> bankConnectionId = GeneratedColumn<String>(
+    'bank_connection_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -11548,6 +11559,7 @@ class $ImportHistoryTable extends ImportHistory
     skippedCount,
     status,
     errorMessage,
+    bankConnectionId,
     createdAt,
   ];
   @override
@@ -11630,6 +11642,15 @@ class $ImportHistoryTable extends ImportHistory
         ),
       );
     }
+    if (data.containsKey('bank_connection_id')) {
+      context.handle(
+        _bankConnectionIdMeta,
+        bankConnectionId.isAcceptableOrUnknown(
+          data['bank_connection_id']!,
+          _bankConnectionIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -11679,6 +11700,10 @@ class $ImportHistoryTable extends ImportHistory
         DriftSqlType.string,
         data['${effectivePrefix}error_message'],
       ),
+      bankConnectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bank_connection_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -11702,6 +11727,7 @@ class ImportHistoryData extends DataClass
   final int skippedCount;
   final String status;
   final String? errorMessage;
+  final String? bankConnectionId;
   final int createdAt;
   const ImportHistoryData({
     required this.id,
@@ -11712,6 +11738,7 @@ class ImportHistoryData extends DataClass
     required this.skippedCount,
     required this.status,
     this.errorMessage,
+    this.bankConnectionId,
     required this.createdAt,
   });
   @override
@@ -11726,6 +11753,9 @@ class ImportHistoryData extends DataClass
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || errorMessage != null) {
       map['error_message'] = Variable<String>(errorMessage);
+    }
+    if (!nullToAbsent || bankConnectionId != null) {
+      map['bank_connection_id'] = Variable<String>(bankConnectionId);
     }
     map['created_at'] = Variable<int>(createdAt);
     return map;
@@ -11743,6 +11773,9 @@ class ImportHistoryData extends DataClass
       errorMessage: errorMessage == null && nullToAbsent
           ? const Value.absent()
           : Value(errorMessage),
+      bankConnectionId: bankConnectionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bankConnectionId),
       createdAt: Value(createdAt),
     );
   }
@@ -11761,6 +11794,7 @@ class ImportHistoryData extends DataClass
       skippedCount: serializer.fromJson<int>(json['skippedCount']),
       status: serializer.fromJson<String>(json['status']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      bankConnectionId: serializer.fromJson<String?>(json['bankConnectionId']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
   }
@@ -11776,6 +11810,7 @@ class ImportHistoryData extends DataClass
       'skippedCount': serializer.toJson<int>(skippedCount),
       'status': serializer.toJson<String>(status),
       'errorMessage': serializer.toJson<String?>(errorMessage),
+      'bankConnectionId': serializer.toJson<String?>(bankConnectionId),
       'createdAt': serializer.toJson<int>(createdAt),
     };
   }
@@ -11789,6 +11824,7 @@ class ImportHistoryData extends DataClass
     int? skippedCount,
     String? status,
     Value<String?> errorMessage = const Value.absent(),
+    Value<String?> bankConnectionId = const Value.absent(),
     int? createdAt,
   }) => ImportHistoryData(
     id: id ?? this.id,
@@ -11799,6 +11835,9 @@ class ImportHistoryData extends DataClass
     skippedCount: skippedCount ?? this.skippedCount,
     status: status ?? this.status,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    bankConnectionId: bankConnectionId.present
+        ? bankConnectionId.value
+        : this.bankConnectionId,
     createdAt: createdAt ?? this.createdAt,
   );
   ImportHistoryData copyWithCompanion(ImportHistoryCompanion data) {
@@ -11817,6 +11856,9 @@ class ImportHistoryData extends DataClass
       errorMessage: data.errorMessage.present
           ? data.errorMessage.value
           : this.errorMessage,
+      bankConnectionId: data.bankConnectionId.present
+          ? data.bankConnectionId.value
+          : this.bankConnectionId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -11832,6 +11874,7 @@ class ImportHistoryData extends DataClass
           ..write('skippedCount: $skippedCount, ')
           ..write('status: $status, ')
           ..write('errorMessage: $errorMessage, ')
+          ..write('bankConnectionId: $bankConnectionId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -11847,6 +11890,7 @@ class ImportHistoryData extends DataClass
     skippedCount,
     status,
     errorMessage,
+    bankConnectionId,
     createdAt,
   );
   @override
@@ -11861,6 +11905,7 @@ class ImportHistoryData extends DataClass
           other.skippedCount == this.skippedCount &&
           other.status == this.status &&
           other.errorMessage == this.errorMessage &&
+          other.bankConnectionId == this.bankConnectionId &&
           other.createdAt == this.createdAt);
 }
 
@@ -11873,6 +11918,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
   final Value<int> skippedCount;
   final Value<String> status;
   final Value<String?> errorMessage;
+  final Value<String?> bankConnectionId;
   final Value<int> createdAt;
   final Value<int> rowid;
   const ImportHistoryCompanion({
@@ -11884,6 +11930,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
     this.skippedCount = const Value.absent(),
     this.status = const Value.absent(),
     this.errorMessage = const Value.absent(),
+    this.bankConnectionId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -11896,6 +11943,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
     required int skippedCount,
     required String status,
     this.errorMessage = const Value.absent(),
+    this.bankConnectionId = const Value.absent(),
     required int createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -11915,6 +11963,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
     Expression<int>? skippedCount,
     Expression<String>? status,
     Expression<String>? errorMessage,
+    Expression<String>? bankConnectionId,
     Expression<int>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -11927,6 +11976,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
       if (skippedCount != null) 'skipped_count': skippedCount,
       if (status != null) 'status': status,
       if (errorMessage != null) 'error_message': errorMessage,
+      if (bankConnectionId != null) 'bank_connection_id': bankConnectionId,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -11941,6 +11991,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
     Value<int>? skippedCount,
     Value<String>? status,
     Value<String?>? errorMessage,
+    Value<String?>? bankConnectionId,
     Value<int>? createdAt,
     Value<int>? rowid,
   }) {
@@ -11953,6 +12004,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
       skippedCount: skippedCount ?? this.skippedCount,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
+      bankConnectionId: bankConnectionId ?? this.bankConnectionId,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -11985,6 +12037,9 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
     if (errorMessage.present) {
       map['error_message'] = Variable<String>(errorMessage.value);
     }
+    if (bankConnectionId.present) {
+      map['bank_connection_id'] = Variable<String>(bankConnectionId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -12005,6 +12060,7 @@ class ImportHistoryCompanion extends UpdateCompanion<ImportHistoryData> {
           ..write('skippedCount: $skippedCount, ')
           ..write('status: $status, ')
           ..write('errorMessage: $errorMessage, ')
+          ..write('bankConnectionId: $bankConnectionId, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -18023,6 +18079,7 @@ typedef $$ImportHistoryTableCreateCompanionBuilder =
       required int skippedCount,
       required String status,
       Value<String?> errorMessage,
+      Value<String?> bankConnectionId,
       required int createdAt,
       Value<int> rowid,
     });
@@ -18036,6 +18093,7 @@ typedef $$ImportHistoryTableUpdateCompanionBuilder =
       Value<int> skippedCount,
       Value<String> status,
       Value<String?> errorMessage,
+      Value<String?> bankConnectionId,
       Value<int> createdAt,
       Value<int> rowid,
     });
@@ -18086,6 +18144,11 @@ class $$ImportHistoryTableFilterComposer
 
   ColumnFilters<String> get errorMessage => $composableBuilder(
     column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bankConnectionId => $composableBuilder(
+    column: $table.bankConnectionId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18144,6 +18207,11 @@ class $$ImportHistoryTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get bankConnectionId => $composableBuilder(
+    column: $table.bankConnectionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -18186,6 +18254,11 @@ class $$ImportHistoryTableAnnotationComposer
 
   GeneratedColumn<String> get errorMessage => $composableBuilder(
     column: $table.errorMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bankConnectionId => $composableBuilder(
+    column: $table.bankConnectionId,
     builder: (column) => column,
   );
 
@@ -18236,6 +18309,7 @@ class $$ImportHistoryTableTableManager
                 Value<int> skippedCount = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
+                Value<String?> bankConnectionId = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ImportHistoryCompanion(
@@ -18247,6 +18321,7 @@ class $$ImportHistoryTableTableManager
                 skippedCount: skippedCount,
                 status: status,
                 errorMessage: errorMessage,
+                bankConnectionId: bankConnectionId,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -18260,6 +18335,7 @@ class $$ImportHistoryTableTableManager
                 required int skippedCount,
                 required String status,
                 Value<String?> errorMessage = const Value.absent(),
+                Value<String?> bankConnectionId = const Value.absent(),
                 required int createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => ImportHistoryCompanion.insert(
@@ -18271,6 +18347,7 @@ class $$ImportHistoryTableTableManager
                 skippedCount: skippedCount,
                 status: status,
                 errorMessage: errorMessage,
+                bankConnectionId: bankConnectionId,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
