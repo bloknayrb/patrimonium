@@ -10,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/widgets/category_picker_sheet.dart';
 import '../accounts/accounts_providers.dart';
-import 'transactions_providers.dart';
 
 /// Add or edit a financial transaction.
 class AddEditTransactionScreen extends ConsumerStatefulWidget {

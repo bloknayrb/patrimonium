@@ -348,6 +348,7 @@ class ImportHistory extends Table {
   IntColumn get skippedCount => integer()();
   TextColumn get status => text()();
   TextColumn get errorMessage => text().nullable()();
+  TextColumn get bankConnectionId => text().nullable()();
   IntColumn get createdAt => integer()();
 
   @override
@@ -395,7 +396,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -407,13 +408,13 @@ class AppDatabase extends _$AppDatabase {
           // sequential `if (from < N)` blocks below. Each block handles
           // the migration from version N-1 to N.
           //
-          // Example for future schema version 2:
-          // if (from < 2) {
-          //   await m.addColumn(accounts, accounts.someNewColumn);
-          // }
-          //
           // Migrations are cumulative — a user upgrading from v1 to v3
           // will run both the v2 and v3 blocks in order.
+
+          // v1 → v2: Add bankConnectionId to ImportHistory
+          if (from < 2) {
+            await m.addColumn(importHistory, importHistory.bankConnectionId);
+          }
         },
         beforeOpen: (details) async {
           // Enable foreign key enforcement for all connections.

@@ -39,6 +39,18 @@ class ImportRepository {
         .watch();
   }
 
+  /// Watch import history filtered by connection ID, limited to most recent entries.
+  Stream<List<ImportHistoryData>> watchImportHistoryByConnection(
+    String connectionId, {
+    int limit = 10,
+  }) {
+    return (_db.select(_db.importHistory)
+          ..where((r) => r.bankConnectionId.equals(connectionId))
+          ..orderBy([(r) => OrderingTerm.desc(r.createdAt)])
+          ..limit(limit))
+        .watch();
+  }
+
   /// Delete an import record by ID.
   Future<int> deleteImportRecord(String id) {
     return (_db.delete(_db.importHistory)..where((r) => r.id.equals(id))).go();

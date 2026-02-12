@@ -281,6 +281,7 @@ class SimplefinSyncService {
         importedCount: transactionsImported,
         skippedCount: transactionsSkipped,
         status: 'completed',
+        bankConnectionId: Value(connectionId),
         createdAt: nowMillis,
       ));
 

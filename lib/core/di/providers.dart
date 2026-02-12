@@ -21,6 +21,7 @@ import '../../domain/usecases/recurring/recurring_detection_service.dart';
 import '../../data/remote/dio_client.dart';
 import '../../data/remote/simplefin/simplefin_client.dart';
 import '../../data/repositories/bank_connection_repository.dart';
+import '../../domain/usecases/sync/background_sync_manager.dart';
 import '../../domain/usecases/sync/simplefin_sync_service.dart';
 import '../router/app_router.dart';
 
@@ -104,6 +105,10 @@ final simplefinSyncServiceProvider = Provider<SimplefinSyncService>((ref) {
     transactionRepo: ref.watch(transactionRepositoryProvider),
     importRepo: ref.watch(importRepositoryProvider),
   );
+});
+
+final backgroundSyncManagerProvider = Provider<BackgroundSyncManager>((ref) {
+  return BackgroundSyncManager();
 });
 
 // =============================================================================

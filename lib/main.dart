@@ -1,15 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
 import 'core/di/providers.dart';
 import 'data/local/database/app_database.dart';
 import 'data/repositories/category_repository.dart';
 import 'domain/usecases/categories/category_seeder.dart';
+import 'domain/usecases/sync/background_sync_callback.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize WorkManager for background sync (Android only)
+  if (Platform.isAndroid) {
+    await Workmanager().initialize(callbackDispatcher);
+  }
 
   // Open the database
   final database = await AppDatabase.open();
