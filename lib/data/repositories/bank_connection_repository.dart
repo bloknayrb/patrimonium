@@ -89,4 +89,63 @@ class BankConnectionRepository {
         .getSingle();
     return result.read(count) ?? 0;
   }
+
+  // ---------------------------------------------------------------------------
+  // Circuit breaker
+  // ---------------------------------------------------------------------------
+
+  /// Read circuit breaker state for a connection.
+  Future<({int consecutiveFailures, int? lastFailureTime})>
+      getCircuitBreakerState(String id) async {
+    final conn = await getConnectionById(id);
+    return (
+      consecutiveFailures: conn?.consecutiveFailures ?? 0,
+      lastFailureTime: conn?.lastFailureTime,
+    );
+  }
+
+  /// Update circuit breaker failure count and timestamp.
+  Future<void> updateCircuitBreakerState(
+    String id, {
+    required int consecutiveFailures,
+    int? lastFailureTime,
+  }) {
+    return (_db.update(_db.bankConnections)
+          ..where((c) => c.id.equals(id)))
+        .write(BankConnectionsCompanion(
+      consecutiveFailures: Value(consecutiveFailures),
+      lastFailureTime: Value(lastFailureTime),
+    ));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sync lock
+  // ---------------------------------------------------------------------------
+
+  /// Atomically acquire the sync lock. Returns true if acquired.
+  Future<bool> tryAcquireSyncLock(String id) async {
+    final rows = await _db.customUpdate(
+      'UPDATE bank_connections SET is_syncing = 1 WHERE id = ? AND is_syncing = 0',
+      variables: [Variable.withString(id)],
+      updates: {_db.bankConnections},
+    );
+    return rows > 0;
+  }
+
+  /// Release the sync lock.
+  Future<void> releaseSyncLock(String id) {
+    return (_db.update(_db.bankConnections)
+          ..where((c) => c.id.equals(id)))
+        .write(const BankConnectionsCompanion(
+      isSyncing: Value(false),
+    ));
+  }
+
+  /// Reset all sync locks (crash recovery on app startup).
+  Future<void> resetAllSyncLocks() {
+    return _db.customUpdate(
+      'UPDATE bank_connections SET is_syncing = 0 WHERE is_syncing = 1',
+      updates: {_db.bankConnections},
+    );
+  }
 }

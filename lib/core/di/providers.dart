@@ -53,9 +53,14 @@ final dioClientProvider = Provider<Dio>((ref) {
   return createDioClient();
 });
 
-/// Provides the SimpleFIN API client.
+/// Provides a Dio client with longer timeouts for SimpleFIN transaction syncs.
+final simplefinDioClientProvider = Provider<Dio>((ref) {
+  return createSimplefinDioClient();
+});
+
+/// Provides the SimpleFIN API client (uses longer timeout for transaction pulls).
 final simplefinClientProvider = Provider<SimplefinClient>((ref) {
-  return SimplefinClient(ref.watch(dioClientProvider));
+  return SimplefinClient(ref.watch(simplefinDioClientProvider));
 });
 
 // =============================================================================

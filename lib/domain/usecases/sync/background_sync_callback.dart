@@ -26,12 +26,15 @@ void callbackDispatcher() {
       db = await AppDatabase.open();
 
       final secureStorage = SecureStorageService();
-      final dio = createDioClient();
+      final dio = createSimplefinDioClient();
       final simplefinClient = SimplefinClient(dio);
       final connectionRepo = BankConnectionRepository(db);
       final accountRepo = AccountRepository(db);
       final transactionRepo = TransactionRepository(db);
       final importRepo = ImportRepository(db);
+
+      // Reset stale sync locks from any previous crash
+      await connectionRepo.resetAllSyncLocks();
 
       final syncService = SimplefinSyncService(
         simplefinClient: simplefinClient,
@@ -42,10 +45,10 @@ void callbackDispatcher() {
         importRepo: importRepo,
       );
 
-      // Sync all active connections
+      // Only sync connections that are in a healthy state
       final connections = await connectionRepo.getAllConnections();
       for (final connection in connections) {
-        if (connection.status == ConnectionStatus.disconnected) continue;
+        if (connection.status != ConnectionStatus.connected) continue;
         await syncService.syncConnection(connection.id);
       }
 
