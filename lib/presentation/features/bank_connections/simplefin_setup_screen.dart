@@ -47,6 +47,12 @@ class _SimplefinSetupScreenState extends ConsumerState<SimplefinSetupScreen> {
       final connectionRepo = ref.read(bankConnectionRepositoryProvider);
       final connection = await connectionRepo.getConnectionById(connectionId);
 
+      // Auto-enable background sync on first connection
+      final storage = ref.read(secureStorageProvider);
+      await storage.setAutoSyncEnabled(true);
+      final syncManager = ref.read(backgroundSyncManagerProvider);
+      await syncManager.register(syncCallback: () async {});
+
       setState(() {
         _connectionId = connectionId;
         _institutionName = connection?.institutionName ?? 'Your Bank';
@@ -189,6 +195,27 @@ class _SimplefinSetupScreenState extends ConsumerState<SimplefinSetupScreen> {
         ),
         const SizedBox(height: 8),
         const Text('Link your bank accounts to start syncing transactions.'),
+        const SizedBox(height: 12),
+        Card(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(Icons.sync, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Auto-sync enabled — accounts will sync every 8 hours.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 16),
         Row(
           children: [

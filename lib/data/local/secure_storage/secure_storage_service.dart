@@ -18,6 +18,7 @@ class SecureStorageService {
   static const _pinSalt = 'pin_salt';
   static const _biometricEnabled = 'biometric_enabled';
   static const _autoLockTimeout = 'auto_lock_timeout';
+  static const _autoSyncEnabled = 'auto_sync_enabled';
 
   static const _simplefinToken = 'simplefin_token';
   static const _simplefinSetupUrl = 'simplefin_setup_url';
@@ -70,6 +71,16 @@ class SecureStorageService {
 
   Future<void> setAutoLockTimeoutSeconds(int seconds) =>
       _storage.write(key: _autoLockTimeout, value: seconds.toString());
+
+  // ─── Auto-sync ───────────────────────────────────────────────────
+
+  Future<bool> getAutoSyncEnabled() async {
+    final value = await _storage.read(key: _autoSyncEnabled);
+    return value == 'true';
+  }
+
+  Future<void> setAutoSyncEnabled(bool enabled) =>
+      _storage.write(key: _autoSyncEnabled, value: enabled.toString());
 
   // ─── SimpleFIN ────────────────────────────────────────────────────
 
