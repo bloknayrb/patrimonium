@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -26,7 +27,9 @@ class PatrimoniumApp extends ConsumerWidget {
           darkTheme: AppTheme.dark(darkDynamic),
           routerConfig: router,
           builder: (context, child) {
-            return _AutoLockObserver(child: child ?? const SizedBox.shrink());
+            return _BackgroundSyncInitializer(
+              child: _AutoLockObserver(child: child ?? const SizedBox.shrink()),
+            );
           },
         );
       },
@@ -91,6 +94,47 @@ class _AutoLockObserverState extends ConsumerState<_AutoLockObserver>
       // Navigate to lock screen
       final router = ref.read(appRouterProvider);
       router.go(AppRoutes.lock);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+/// Registers background sync on startup if auto-sync is enabled and
+/// bank connections exist. Android-only for v1 (WorkManager).
+class _BackgroundSyncInitializer extends ConsumerStatefulWidget {
+  final Widget child;
+
+  const _BackgroundSyncInitializer({required this.child});
+
+  @override
+  ConsumerState<_BackgroundSyncInitializer> createState() =>
+      _BackgroundSyncInitializerState();
+}
+
+class _BackgroundSyncInitializerState
+    extends ConsumerState<_BackgroundSyncInitializer> {
+  @override
+  void initState() {
+    super.initState();
+    _maybeRegisterSync();
+  }
+
+  Future<void> _maybeRegisterSync() async {
+    try {
+      final storage = ref.read(secureStorageProvider);
+      final enabled = await storage.getAutoSyncEnabled();
+      if (!enabled) return;
+
+      final connectionRepo = ref.read(bankConnectionRepositoryProvider);
+      final connections = await connectionRepo.getAllConnections();
+      if (connections.isEmpty) return;
+
+      final syncManager = ref.read(backgroundSyncManagerProvider);
+      await syncManager.register(syncCallback: () async {});
+    } catch (e) {
+      if (kDebugMode) debugPrint('Background sync registration failed: $e');
     }
   }
 

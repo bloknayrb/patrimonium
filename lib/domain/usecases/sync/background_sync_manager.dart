@@ -36,7 +36,7 @@ class BackgroundSyncManager {
         constraints: Constraints(
           networkType: NetworkType.connected,
         ),
-        existingWorkPolicy: ExistingWorkPolicy.keep,
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       );
     } else if (Platform.isLinux) {
       // Linux: in-process timer (runs only while app is open)

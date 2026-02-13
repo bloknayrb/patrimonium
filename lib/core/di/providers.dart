@@ -116,6 +116,17 @@ final backgroundSyncManagerProvider = Provider<BackgroundSyncManager>((ref) {
   return BackgroundSyncManager();
 });
 
+/// Whether auto-sync is enabled in settings.
+final autoSyncEnabledProvider = FutureProvider<bool>((ref) {
+  return ref.watch(secureStorageProvider).getAutoSyncEnabled();
+});
+
+/// All bank connections (for conditional UI like the auto-sync toggle).
+final bankConnectionsStreamProvider =
+    StreamProvider.autoDispose<List<BankConnection>>((ref) {
+  return ref.watch(bankConnectionRepositoryProvider).watchAllConnections();
+});
+
 // =============================================================================
 // EXPORT
 // =============================================================================

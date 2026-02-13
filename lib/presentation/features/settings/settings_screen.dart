@@ -16,6 +16,8 @@ class SettingsScreen extends ConsumerWidget {
     final biometricAvailable = ref.watch(biometricAvailableProvider);
     final biometricEnabled = ref.watch(biometricEnabledProvider);
     final autoLockTimeout = ref.watch(autoLockTimeoutProvider);
+    final bankConnections = ref.watch(bankConnectionsStreamProvider);
+    final autoSyncEnabled = ref.watch(autoSyncEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -48,6 +50,31 @@ class SettingsScreen extends ConsumerWidget {
               context.push(AppRoutes.bankConnections);
             },
           ),
+
+          // Auto-sync toggle — only shown when connections exist
+          if ((bankConnections.valueOrNull ?? []).isNotEmpty)
+            SwitchListTile(
+              secondary: const Icon(Icons.sync),
+              title: const Text('Auto Sync'),
+              subtitle: Text(
+                autoSyncEnabled.valueOrNull == true
+                    ? 'Sync bank accounts every 8 hours'
+                    : 'Disabled',
+              ),
+              value: autoSyncEnabled.valueOrNull ?? false,
+              onChanged: (value) async {
+                final storage = ref.read(secureStorageProvider);
+                await storage.setAutoSyncEnabled(value);
+                ref.invalidate(autoSyncEnabledProvider);
+
+                final syncManager = ref.read(backgroundSyncManagerProvider);
+                if (value) {
+                  await syncManager.register(syncCallback: () async {});
+                } else {
+                  await syncManager.cancel();
+                }
+              },
+            ),
 
           const Divider(),
 
