@@ -69,6 +69,9 @@ dependencies:
   # Equatable for value objects
   equatable: ^2.0.7
 
+  # File Picker (Android SAF + Linux GTK)
+  file_picker: ^8.1.7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
