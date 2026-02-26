@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,6 +91,21 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       });
     } catch (e) {
       if (mounted) _showError('Error reading file: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // File picker
+  // ---------------------------------------------------------------------------
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv', 'txt'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      _filePathController.text = result.files.single.path!;
     }
   }
 
@@ -293,16 +309,26 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildFileStep() {
+    final isAndroid = Platform.isAndroid;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextFormField(
           controller: _filePathController,
-          decoration: const InputDecoration(
-            labelText: 'File Path',
-            hintText: '/path/to/transactions.csv',
+          readOnly: isAndroid,
+          decoration: InputDecoration(
+            labelText: isAndroid ? 'Selected File' : 'File Path',
+            hintText: isAndroid
+                ? 'Tap browse to select a file'
+                : '/path/to/transactions.csv',
             filled: true,
-            prefixIcon: Icon(Icons.file_present),
+            prefixIcon: const Icon(Icons.file_present),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.folder_open),
+              onPressed: _pickFile,
+              tooltip: 'Browse files',
+            ),
           ),
         ),
         const SizedBox(height: 12),
