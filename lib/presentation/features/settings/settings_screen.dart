@@ -140,7 +140,20 @@ class SettingsScreen extends ConsumerWidget {
                 value: biometricEnabled.valueOrNull ?? false,
                 onChanged: (value) async {
                   final biometricService = ref.read(biometricServiceProvider);
-                  await biometricService.setEnabled(value);
+                  if (value) {
+                    // Verify biometric works before enabling
+                    final success = await biometricService.verifyAndEnable();
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Biometric authentication failed. Please try again.'),
+                        ),
+                      );
+                    }
+                  } else {
+                    await biometricService.setEnabled(false);
+                  }
                   ref.invalidate(biometricEnabledProvider);
                 },
               ),

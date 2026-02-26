@@ -37,6 +37,7 @@ class BiometricService {
   /// Authenticate the user with biometrics.
   ///
   /// Returns true if authentication was successful.
+  /// Only attempts authentication if biometric is both available and enabled.
   Future<bool> authenticate({
     String reason = 'Unlock Patrimonium',
   }) async {
@@ -44,8 +45,8 @@ class BiometricService {
       final isAvail = await isAvailable();
       if (!isAvail) return false;
 
-      final isEnabled = await _storage.isBiometricEnabled();
-      if (!isEnabled) return false;
+      final enabled = await _storage.isBiometricEnabled();
+      if (!enabled) return false;
 
       return await _localAuth.authenticate(
         localizedReason: reason,
@@ -56,6 +57,33 @@ class BiometricService {
       );
     } catch (e) {
       if (kDebugMode) debugPrint('Biometric auth failed: $e');
+      return false;
+    }
+  }
+
+  /// Verify biometric works and enable it if successful.
+  ///
+  /// Used by the settings toggle to confirm biometric auth works
+  /// before persisting the preference.
+  Future<bool> verifyAndEnable() async {
+    try {
+      final isAvail = await isAvailable();
+      if (!isAvail) return false;
+
+      final success = await _localAuth.authenticate(
+        localizedReason: 'Verify biometric to enable',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: true,
+        ),
+      );
+
+      if (success) {
+        await _storage.setBiometricEnabled(true);
+      }
+      return success;
+    } catch (e) {
+      if (kDebugMode) debugPrint('Biometric verification failed: $e');
       return false;
     }
   }
