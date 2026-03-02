@@ -19,6 +19,7 @@ import '../../presentation/features/goals/goals_screen.dart';
 import '../../presentation/features/recurring/recurring_screen.dart';
 import '../../presentation/features/import/csv_import_screen.dart';
 import '../../presentation/features/import/import_history_screen.dart';
+import '../../presentation/features/ai_assistant/chat_screen.dart';
 import '../../presentation/features/settings/llm_config_screen.dart';
 import '../../presentation/shared/widgets/app_shell.dart';
 import '../di/providers.dart';
@@ -46,6 +47,7 @@ class AppRoutes {
   static const String csvImport = '/import/csv';
   static const String importHistory = '/import/history';
   static const String llmConfig = '/settings/llm';
+  static const String aiChat = '/ai/chat';
 }
 
 /// Navigator keys for each tab branch.
@@ -178,6 +180,16 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.llmConfig,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const LlmConfigScreen(),
+      ),
+
+      // AI chat (full-screen)
+      GoRoute(
+        path: AppRoutes.aiChat,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final conversationId = state.uri.queryParameters['conversationId'];
+          return ChatScreen(conversationId: conversationId);
+        },
       ),
 
       // Main app with bottom navigation

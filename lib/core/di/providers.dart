@@ -18,6 +18,7 @@ import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
+import '../../domain/usecases/ai/ai_chat_service.dart';
 import '../../domain/usecases/ai/financial_context_builder.dart';
 import '../../domain/usecases/ai/insight_generation_service.dart';
 import '../../data/remote/dio_client.dart';
@@ -287,6 +288,13 @@ final insightGenerationServiceProvider =
   return InsightGenerationService(
     contextBuilder: ref.watch(financialContextBuilderProvider),
     insightRepo: ref.watch(insightRepositoryProvider),
+  );
+});
+
+final aiChatServiceProvider = Provider<AiChatService>((ref) {
+  return AiChatService(
+    conversationRepo: ref.watch(conversationRepositoryProvider),
+    contextBuilder: ref.watch(financialContextBuilderProvider),
   );
 });
 

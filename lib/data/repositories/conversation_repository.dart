@@ -70,4 +70,18 @@ class ConversationRepository {
   Future<void> insertMessage(MessagesCompanion message) {
     return _db.into(_db.messages).insert(message);
   }
+
+  /// Update the content of an existing message (used after streaming completes).
+  Future<void> updateMessageContent(String id, String content) {
+    return (_db.update(_db.messages)..where((m) => m.id.equals(id)))
+        .write(MessagesCompanion(content: Value(content)));
+  }
+
+  /// Touch the conversation's updatedAt timestamp.
+  Future<void> touchConversation(String id) {
+    return (_db.update(_db.conversations)..where((c) => c.id.equals(id)))
+        .write(ConversationsCompanion(
+      updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+    ));
+  }
 }
