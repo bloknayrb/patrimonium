@@ -18,8 +18,14 @@ import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
+import '../../domain/usecases/ai/ai_chat_service.dart';
+import '../../domain/usecases/ai/financial_context_builder.dart';
+import '../../domain/usecases/ai/insight_generation_service.dart';
 import '../../data/remote/dio_client.dart';
+import '../../data/remote/llm/llm_client.dart';
 import '../../data/remote/simplefin/simplefin_client.dart';
+import '../../data/repositories/conversation_repository.dart';
+import '../../data/repositories/insight_repository.dart';
 import '../../data/repositories/bank_connection_repository.dart';
 import '../../domain/usecases/sync/background_sync_manager.dart';
 import '../../domain/usecases/sync/simplefin_sync_service.dart';
@@ -241,4 +247,64 @@ final expenseCategoriesProvider = StreamProvider.autoDispose<List<Category>>((re
 /// Income categories only.
 final incomeCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
   return ref.watch(categoryRepositoryProvider).watchIncomeCategories();
+});
+
+// =============================================================================
+// AI / LLM
+// =============================================================================
+
+final insightRepositoryProvider = Provider<InsightRepository>((ref) {
+  return InsightRepository(ref.watch(databaseProvider));
+});
+
+final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
+  return ConversationRepository(ref.watch(databaseProvider));
+});
+
+final financialContextBuilderProvider = Provider<FinancialContextBuilder>((ref) {
+  return FinancialContextBuilder(
+    accountRepo: ref.watch(accountRepositoryProvider),
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    budgetRepo: ref.watch(budgetRepositoryProvider),
+    goalRepo: ref.watch(goalRepositoryProvider),
+  );
+});
+
+/// Creates the active LLM client based on stored provider preference.
+/// Returns null if no provider is configured.
+final llmClientProvider = FutureProvider<LlmClient?>((ref) async {
+  final storage = ref.watch(secureStorageProvider);
+  final provider = await storage.getActiveLlmProvider();
+  if (provider == null) return null;
+
+  final apiKey = await storage.getLlmApiKey(provider) ?? '';
+  if (apiKey.isEmpty) return null;
+
+  return createLlmClient(provider, apiKey, createLlmDioClient());
+});
+
+final insightGenerationServiceProvider =
+    Provider<InsightGenerationService>((ref) {
+  return InsightGenerationService(
+    contextBuilder: ref.watch(financialContextBuilderProvider),
+    insightRepo: ref.watch(insightRepositoryProvider),
+  );
+});
+
+final aiChatServiceProvider = Provider<AiChatService>((ref) {
+  return AiChatService(
+    conversationRepo: ref.watch(conversationRepositoryProvider),
+    contextBuilder: ref.watch(financialContextBuilderProvider),
+  );
+});
+
+/// Active insights for dashboard display.
+final activeInsightsProvider =
+    StreamProvider.autoDispose<List<Insight>>((ref) {
+  return ref.watch(insightRepositoryProvider).watchActiveInsights();
+});
+
+/// The currently configured LLM provider name (claude, openai, ollama).
+final activeLlmProviderNameProvider = FutureProvider<String?>((ref) {
+  return ref.watch(secureStorageProvider).getActiveLlmProvider();
 });

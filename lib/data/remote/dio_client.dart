@@ -47,3 +47,26 @@ Dio createSimplefinDioClient() {
 
   return dio;
 }
+
+/// Creates a Dio instance for LLM API calls (Claude, OpenAI, Ollama).
+///
+/// Longer 120s receive timeout for streaming LLM responses which can
+/// take significant time for long outputs. responseBody logging disabled
+/// since streaming responses are binary chunks.
+Dio createLlmDioClient() {
+  final dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 120),
+    ),
+  );
+
+  if (kDebugMode) {
+    dio.interceptors.add(LogInterceptor(
+      requestBody: true,
+      responseBody: false,
+    ));
+  }
+
+  return dio;
+}
