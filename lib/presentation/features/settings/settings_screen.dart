@@ -33,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Configure Claude, OpenAI, or Ollama'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              _showComingSoon(context, 'LLM provider configuration');
+              context.push(AppRoutes.llmConfig);
             },
           ),
 
