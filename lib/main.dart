@@ -8,9 +8,13 @@ import 'package:workmanager/workmanager.dart';
 import 'app.dart';
 import 'core/di/providers.dart';
 import 'data/local/database/app_database.dart';
+import 'data/repositories/auto_categorize_repository.dart';
 import 'data/repositories/bank_connection_repository.dart';
 import 'data/repositories/category_repository.dart';
+import 'data/repositories/transaction_repository.dart';
 import 'domain/usecases/categories/category_seeder.dart';
+import 'domain/usecases/categorize/auto_categorize_service.dart';
+import 'domain/usecases/categorize/rule_seeder.dart';
 import 'domain/usecases/sync/background_sync_callback.dart';
 
 Future<void> main() async {
@@ -31,6 +35,21 @@ Future<void> main() async {
     await seeder.seedIfEmpty();
   } catch (e) {
     if (kDebugMode) debugPrint('Category seeding failed: $e');
+  }
+
+  // Seed default auto-categorization rules and apply to existing transactions
+  try {
+    final autoCatRepo = AutoCategorizeRepository(database);
+    final ruleSeeder = RuleSeeder(categoryRepo, autoCatRepo);
+    final rulesSeeded = await ruleSeeder.seedIfEmpty();
+
+    if (rulesSeeded) {
+      final txnRepo = TransactionRepository(database);
+      final autoCatService = AutoCategorizeService(autoCatRepo, txnRepo);
+      await autoCatService.categorizeUncategorized();
+    }
+  } catch (e) {
+    if (kDebugMode) debugPrint('Rule seeding failed: $e');
   }
 
   // Reset stale sync locks from any previous crash

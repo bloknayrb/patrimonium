@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +38,7 @@ class _AddEditTransactionScreenState
   String? _selectedCategoryName;
   bool _isExpense = true;
   bool _isSaving = false;
+  Timer? _payeeSuggestionTimer;
 
   bool get _isEditing => widget.transaction != null;
 
@@ -52,16 +55,41 @@ class _AddEditTransactionScreenState
       _selectedAccountId = t.accountId;
       _selectedCategoryId = t.categoryId;
       _isExpense = t.amountCents < 0;
+    } else {
+      _payeeController.addListener(_onPayeeChanged);
     }
   }
 
   @override
   void dispose() {
+    _payeeSuggestionTimer?.cancel();
     _payeeController.dispose();
     _amountController.dispose();
     _notesController.dispose();
     _tagsController.dispose();
     super.dispose();
+  }
+
+  void _onPayeeChanged() {
+    _payeeSuggestionTimer?.cancel();
+    if (_selectedCategoryId != null) return; // user already picked
+    final text = _payeeController.text.trim();
+    if (text.length < 3) return;
+    _payeeSuggestionTimer = Timer(const Duration(milliseconds: 300), () async {
+      final service = ref.read(autoCategorizeServiceProvider);
+      final categoryId = await service.categorize(text);
+      if (categoryId != null && _selectedCategoryId == null && mounted) {
+        final category = await ref
+            .read(categoryRepositoryProvider)
+            .getCategoryById(categoryId);
+        if (category != null && mounted) {
+          setState(() {
+            _selectedCategoryId = categoryId;
+            _selectedCategoryName = category.name;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _pickDate() async {
@@ -152,6 +180,70 @@ class _AddEditTransactionScreenState
           createdAt: now,
           updatedAt: now,
         ));
+      }
+
+      // Record category assignment for auto-categorize learning
+      final payeeText = _payeeController.text.trim();
+      final autoCatService = ref.read(autoCategorizeServiceProvider);
+      if (_selectedCategoryId != null && payeeText.isNotEmpty) {
+        await autoCatService.recordCategoryAssignment(
+          payee: payeeText,
+          categoryId: _selectedCategoryId!,
+          transactionId: _isEditing ? widget.transaction!.id : null,
+          oldCategoryId: _isEditing ? widget.transaction!.categoryId : null,
+        );
+      }
+
+      if (!mounted) return;
+
+      // Check for other uncategorized transactions with the same payee
+      if (_selectedCategoryId != null && payeeText.isNotEmpty) {
+        final matchCount = await autoCatService.countUncategorizedByPayee(
+          payeeText,
+          excludeTransactionId: _isEditing ? widget.transaction!.id : null,
+        );
+
+        if (matchCount > 0 && mounted) {
+          final apply = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Apply to matching transactions?'),
+              content: Text(
+                'Found $matchCount other uncategorized '
+                '${matchCount == 1 ? 'transaction' : 'transactions'} '
+                'from "$payeeText". Apply "$_selectedCategoryName" '
+                'to all of them?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('No'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Apply'),
+                ),
+              ],
+            ),
+          );
+
+          if (apply == true) {
+            final updated = await autoCatService.applyToMatchingPayee(
+              payeeText,
+              _selectedCategoryId!,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Categorized $updated '
+                    '${updated == 1 ? 'transaction' : 'transactions'}',
+                  ),
+                ),
+              );
+            }
+          }
+        }
       }
 
       if (mounted) {
