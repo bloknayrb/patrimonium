@@ -1,4 +1,4 @@
-import '../../../core/error/app_error.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../data/remote/llm/llm_client.dart';
 import '../../../data/repositories/conversation_repository.dart';
 import 'context_builder.dart';
@@ -18,7 +18,15 @@ Rules:
 - Format currency as \$X,XXX.XX. Use markdown for structure.
 ''';
 
-/// Orchestrates sending a message, streaming the LLM response, and persisting results.
+/// Exception thrown when the daily LLM call limit is reached.
+class RateLimitException implements Exception {
+  const RateLimitException();
+  @override
+  String toString() =>
+      'Daily limit of ${AppConstants.maxLlmCallsPerDay} AI queries reached.';
+}
+
+/// Orchestrates sending messages, streaming responses, and persisting conversation history.
 class ChatService {
   ChatService({
     required ConversationRepository conversationRepo,
@@ -29,46 +37,62 @@ class ChatService {
   final ConversationRepository _conversationRepo;
   final ContextBuilder _contextBuilder;
 
-  static const _dailyCallLimit = 50;
+  // In-memory daily rate limit tracking
   int _callsToday = 0;
-  DateTime? _firstCallDate;
+  DateTime? _rateLimitResetDate;
 
-  /// Send a user message and stream the assistant's response.
+  bool _isRateLimited() {
+    final today = DateTime.now();
+    if (_rateLimitResetDate == null ||
+        today.day != _rateLimitResetDate!.day ||
+        today.month != _rateLimitResetDate!.month ||
+        today.year != _rateLimitResetDate!.year) {
+      // New day — reset counter
+      _callsToday = 0;
+      _rateLimitResetDate = today;
+    }
+    return _callsToday >= AppConstants.maxLlmCallsPerDay;
+  }
+
+  /// Send a message and stream the assistant's response.
   ///
-  /// Persists the user message before calling the LLM (crash-safe).
-  /// The assistant message is persisted in [finally] to capture partial
-  /// responses on stream errors.
+  /// Saves the user message before the LLM call (no data loss on crash).
+  /// Saves the assistant message in a finally block (captures partial on error).
   Stream<String> sendMessage({
     required LlmClient client,
     required String conversationId,
     required String userMessage,
   }) async* {
-    _enforceRateLimit();
+    if (_isRateLimited()) throw const RateLimitException();
+    _callsToday++;
 
-    // 1. Persist user message immediately (crash-safe ordering)
+    // Save user message first — before any network call
     await _conversationRepo.addMessage(conversationId, 'user', userMessage);
 
-    // 2. Build fresh financial context for this turn
+    // Build fresh financial context each turn
     final context = await _contextBuilder.buildContext();
 
-    // 3. Load full conversation history from DB (includes the message we just saved)
-    final dbMessages =
-        await _conversationRepo.watchMessages(conversationId).first;
+    // Load conversation history
+    final dbMessages = await _conversationRepo.getMessages(conversationId);
+    final history = dbMessages.map((m) {
+      return ChatMessage(role: m.role, content: m.content);
+    }).toList();
+
+    // Prepend financial context as first user-role message
     final messages = [
       ChatMessage(role: 'context', content: context),
-      ...dbMessages.map((m) => ChatMessage(role: m.role, content: m.content)),
+      ...history,
     ];
 
-    // 4. Stream LLM response, accumulating into buffer
+    // Stream response, accumulate for DB save
     final buffer = StringBuffer();
     try {
-      await for (final chunk
-          in client.streamComplete(_systemPrompt, messages)) {
+      await for (final chunk in client.streamComplete(_systemPrompt, messages)) {
         buffer.write(chunk);
         yield chunk;
       }
     } finally {
-      // 5. Always persist assistant message (captures partial on error too)
+      // Always save assistant message — even partial responses on error
       if (buffer.isNotEmpty) {
         await _conversationRepo.addMessage(
           conversationId,
@@ -78,33 +102,17 @@ class ChatService {
       }
     }
 
-    // 6. Auto-title from first user message (truncated to 50 chars)
+    // Auto-title: first exchange — use first 50 chars of user message
     await _maybeSetTitle(conversationId, userMessage);
   }
 
-  void _enforceRateLimit() {
-    final today = DateTime.now();
-    if (_firstCallDate == null || !_isSameDay(_firstCallDate!, today)) {
-      _callsToday = 0;
-      _firstCallDate = today;
-    }
-    if (_callsToday >= _dailyCallLimit) {
-      throw LLMError.rateLimited();
-    }
-    _callsToday++;
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
   Future<void> _maybeSetTitle(
       String conversationId, String userMessage) async {
-    final messages =
-        await _conversationRepo.watchMessages(conversationId).first;
-    final userMessages = messages.where((m) => m.role == 'user');
-    if (userMessages.length == 1) {
+    final messages = await _conversationRepo.getMessages(conversationId);
+    // Only set title after first exchange (user + assistant = 2 messages)
+    if (messages.length == 2) {
       final title = userMessage.length > 50
-          ? '${userMessage.substring(0, 50)}...'
+          ? '${userMessage.substring(0, 50)}…'
           : userMessage;
       await _conversationRepo.updateConversationTitle(conversationId, title);
     }
