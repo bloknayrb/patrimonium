@@ -19,8 +19,16 @@ import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
 import '../../data/remote/dio_client.dart';
+import '../../data/remote/llm/claude_client.dart';
+import '../../data/remote/llm/gemini_client.dart';
+import '../../data/remote/llm/llm_client.dart';
+import '../../data/remote/llm/ollama_client.dart';
+import '../../data/remote/llm/openai_client.dart';
 import '../../data/remote/simplefin/simplefin_client.dart';
 import '../../data/repositories/bank_connection_repository.dart';
+import '../../data/repositories/conversation_repository.dart';
+import '../../domain/usecases/ai/chat_service.dart';
+import '../../domain/usecases/ai/context_builder.dart';
 import '../../domain/usecases/sync/background_sync_manager.dart';
 import '../../domain/usecases/sync/simplefin_sync_service.dart';
 import '../router/app_router.dart';
@@ -56,6 +64,11 @@ final dioClientProvider = Provider<Dio>((ref) {
 /// Provides a Dio client with longer timeouts for SimpleFIN transaction syncs.
 final simplefinDioClientProvider = Provider<Dio>((ref) {
   return createSimplefinDioClient();
+});
+
+/// Provides a Dio client for LLM API calls (redacted logs, 30s timeout).
+final llmDioClientProvider = Provider<Dio>((ref) {
+  return createLlmDioClient();
 });
 
 /// Provides the SimpleFIN API client (uses longer timeout for transaction pulls).
@@ -242,3 +255,83 @@ final expenseCategoriesProvider = StreamProvider.autoDispose<List<Category>>((re
 final incomeCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref) {
   return ref.watch(categoryRepositoryProvider).watchIncomeCategories();
 });
+
+// =============================================================================
+// LLM / AI PROVIDERS
+// =============================================================================
+
+final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
+  return ConversationRepository(ref.watch(databaseProvider));
+});
+
+final contextBuilderProvider = Provider<ContextBuilder>((ref) {
+  return ContextBuilder(
+    accountRepo: ref.watch(accountRepositoryProvider),
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    budgetRepo: ref.watch(budgetRepositoryProvider),
+    goalRepo: ref.watch(goalRepositoryProvider),
+    categoryRepo: ref.watch(categoryRepositoryProvider),
+  );
+});
+
+final chatServiceProvider = Provider<ChatService>((ref) {
+  return ChatService(
+    conversationRepo: ref.watch(conversationRepositoryProvider),
+    contextBuilder: ref.watch(contextBuilderProvider),
+  );
+});
+
+/// The active LLM client, or null when no provider is configured.
+///
+/// Async because it reads from secure storage. Invalidate via
+/// [ref.invalidate(activeLlmClientProvider)] after settings changes.
+final activeLlmClientProvider = FutureProvider<LlmClient?>((ref) async {
+  final storage = ref.watch(secureStorageProvider);
+  final provider = await storage.getActiveLlmProvider();
+  if (provider == null) return null;
+  final apiKey = await storage.getLlmApiKey(provider);
+  final model = await storage.getActiveLlmModel();
+  if (apiKey == null && provider != 'ollama') return null;
+  return _buildLlmClient(provider: provider, apiKey: apiKey, model: model, ref: ref);
+});
+
+/// The name of the currently active LLM provider, or null if unconfigured.
+final activeLlmProviderNameProvider = FutureProvider<String?>((ref) async {
+  return ref.watch(secureStorageProvider).getActiveLlmProvider();
+});
+
+LlmClient? _buildLlmClient({
+  required String provider,
+  required String? apiKey,
+  required String? model,
+  required Ref ref,
+}) {
+  final dio = ref.read(llmDioClientProvider);
+  switch (provider) {
+    case 'gemini':
+      return GeminiClient(
+        apiKey: apiKey!,
+        model: model ?? 'gemini-2.0-flash',
+      );
+    case 'claude':
+      return ClaudeClient(
+        apiKey: apiKey!,
+        dio: dio,
+        model: model ?? 'claude-haiku-4-5-20251001',
+      );
+    case 'openai':
+      return OpenAiClient(
+        apiKey: apiKey!,
+        dio: dio,
+        model: model ?? 'gpt-4o-mini',
+      );
+    case 'ollama':
+      return OllamaClient(
+        baseUrl: apiKey ?? 'http://localhost:11434',
+        dio: dio,
+        model: model ?? 'llama3.2',
+      );
+    default:
+      return null;
+  }
+}
