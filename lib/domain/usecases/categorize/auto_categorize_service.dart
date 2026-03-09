@@ -228,6 +228,39 @@ class AutoCategorizeService {
   // Bulk categorization
   // ---------------------------------------------------------------------------
 
+  /// Count uncategorized transactions whose normalized payee matches [payee].
+  ///
+  /// Optionally excludes a specific transaction by [excludeTransactionId].
+  Future<int> countUncategorizedByPayee(
+    String payee, {
+    String? excludeTransactionId,
+  }) async {
+    final normalized = normalizePayee(payee);
+    if (normalized.isEmpty) return 0;
+    final uncategorized = await _transactionRepo.getUncategorizedTransactions();
+    return uncategorized.where((txn) {
+      if (txn.id == excludeTransactionId) return false;
+      return normalizePayee(txn.payee) == normalized;
+    }).length;
+  }
+
+  /// Apply [categoryId] to all uncategorized transactions matching [payee].
+  ///
+  /// Returns the number of transactions updated.
+  Future<int> applyToMatchingPayee(String payee, String categoryId) async {
+    final normalized = normalizePayee(payee);
+    if (normalized.isEmpty) return 0;
+    final uncategorized = await _transactionRepo.getUncategorizedTransactions();
+    var count = 0;
+    for (final txn in uncategorized) {
+      if (normalizePayee(txn.payee) == normalized) {
+        await _transactionRepo.updateCategory(txn.id, categoryId);
+        count++;
+      }
+    }
+    return count;
+  }
+
   /// Auto-categorize all uncategorized transactions.
   ///
   /// Returns the number of transactions that were categorized.

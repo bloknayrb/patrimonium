@@ -184,13 +184,66 @@ class _AddEditTransactionScreenState
 
       // Record category assignment for auto-categorize learning
       final payeeText = _payeeController.text.trim();
+      final autoCatService = ref.read(autoCategorizeServiceProvider);
       if (_selectedCategoryId != null && payeeText.isNotEmpty) {
-        ref.read(autoCategorizeServiceProvider).recordCategoryAssignment(
+        await autoCatService.recordCategoryAssignment(
           payee: payeeText,
           categoryId: _selectedCategoryId!,
           transactionId: _isEditing ? widget.transaction!.id : null,
           oldCategoryId: _isEditing ? widget.transaction!.categoryId : null,
         );
+      }
+
+      if (!mounted) return;
+
+      // Check for other uncategorized transactions with the same payee
+      if (_selectedCategoryId != null && payeeText.isNotEmpty) {
+        final matchCount = await autoCatService.countUncategorizedByPayee(
+          payeeText,
+          excludeTransactionId: _isEditing ? widget.transaction!.id : null,
+        );
+
+        if (matchCount > 0 && mounted) {
+          final apply = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Apply to matching transactions?'),
+              content: Text(
+                'Found $matchCount other uncategorized '
+                '${matchCount == 1 ? 'transaction' : 'transactions'} '
+                'from "$payeeText". Apply "$_selectedCategoryName" '
+                'to all of them?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('No'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Apply'),
+                ),
+              ],
+            ),
+          );
+
+          if (apply == true) {
+            final updated = await autoCatService.applyToMatchingPayee(
+              payeeText,
+              _selectedCategoryId!,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Categorized $updated '
+                    '${updated == 1 ? 'transaction' : 'transactions'}',
+                  ),
+                ),
+              );
+            }
+          }
+        }
       }
 
       if (mounted) {
