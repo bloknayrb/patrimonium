@@ -50,6 +50,22 @@ class AutoCategorizeRepository {
         .go();
   }
 
+  /// Insert multiple rules in a single batch.
+  Future<void> insertRules(List<AutoCategorizeRulesCompanion> rules) {
+    return _db.batch((batch) {
+      batch.insertAll(_db.autoCategorizeRules, rules);
+    });
+  }
+
+  /// Check if any rules exist.
+  Future<bool> hasRules() async {
+    final count = _db.autoCategorizeRules.id.count();
+    final result = await (_db.selectOnly(_db.autoCategorizeRules)
+          ..addColumns([count]))
+        .getSingle();
+    return (result.read(count) ?? 0) > 0;
+  }
+
   // ---------------------------------------------------------------------------
   // CategorizationCorrections
   // ---------------------------------------------------------------------------
