@@ -1,5 +1,7 @@
 # Patrimonium
 
+[![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
+
 A personal finance management app built with Flutter, featuring local-first data storage, AI-powered insights, and bank connectivity.
 
 ## Features

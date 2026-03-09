@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../theme/app_theme.dart';
 
 import '../../data/local/database/app_database.dart';
 import '../../data/local/secure_storage/secure_storage_service.dart';
@@ -18,6 +19,9 @@ import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
+import '../../domain/usecases/ai/chat_service.dart';
+import '../../domain/usecases/ai/context_builder.dart';
+import '../../domain/usecases/ai/insight_generation_service.dart';
 import '../../data/remote/dio_client.dart';
 import '../../data/remote/llm/claude_client.dart';
 import '../../data/remote/llm/gemini_client.dart';
@@ -25,10 +29,9 @@ import '../../data/remote/llm/llm_client.dart';
 import '../../data/remote/llm/ollama_client.dart';
 import '../../data/remote/llm/openai_client.dart';
 import '../../data/remote/simplefin/simplefin_client.dart';
-import '../../data/repositories/bank_connection_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
-import '../../domain/usecases/ai/chat_service.dart';
-import '../../domain/usecases/ai/context_builder.dart';
+import '../../data/repositories/insight_repository.dart';
+import '../../data/repositories/bank_connection_repository.dart';
 import '../../domain/usecases/sync/background_sync_manager.dart';
 import '../../domain/usecases/sync/simplefin_sync_service.dart';
 import '../router/app_router.dart';
@@ -223,8 +226,20 @@ final autoLockTimeoutProvider = FutureProvider<int>((ref) {
 // APP STATE PROVIDERS
 // =============================================================================
 
-/// Provider for the current theme mode.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+/// Provider for the current theme mode, persisted to secure storage.
+final appThemeModeProvider =
+    StateProvider<AppThemeMode>((ref) => AppThemeMode.system);
+
+/// Loads the persisted theme mode on app start.
+final themeModeInitProvider = FutureProvider<AppThemeMode>((ref) async {
+  final stored = await ref.watch(secureStorageProvider).getThemeMode();
+  final mode = AppThemeMode.values
+          .where((e) => e.name == stored)
+          .firstOrNull ??
+      AppThemeMode.system;
+  ref.read(appThemeModeProvider.notifier).state = mode;
+  return mode;
+});
 
 /// Provider for the app router (needs Ref for auth redirect logic).
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -257,8 +272,12 @@ final incomeCategoriesProvider = StreamProvider.autoDispose<List<Category>>((ref
 });
 
 // =============================================================================
-// LLM / AI PROVIDERS
+// AI / LLM PROVIDERS
 // =============================================================================
+
+final insightRepositoryProvider = Provider<InsightRepository>((ref) {
+  return InsightRepository(ref.watch(databaseProvider));
+});
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
   return ConversationRepository(ref.watch(databaseProvider));
@@ -281,6 +300,14 @@ final chatServiceProvider = Provider<ChatService>((ref) {
   );
 });
 
+final insightGenerationServiceProvider =
+    Provider<InsightGenerationService>((ref) {
+  return InsightGenerationService(
+    contextBuilder: ref.watch(contextBuilderProvider),
+    insightRepo: ref.watch(insightRepositoryProvider),
+  );
+});
+
 /// The active LLM client, or null when no provider is configured.
 ///
 /// Async because it reads from secure storage. Invalidate via
@@ -298,6 +325,12 @@ final activeLlmClientProvider = FutureProvider<LlmClient?>((ref) async {
 /// The name of the currently active LLM provider, or null if unconfigured.
 final activeLlmProviderNameProvider = FutureProvider<String?>((ref) async {
   return ref.watch(secureStorageProvider).getActiveLlmProvider();
+});
+
+/// Active insights for dashboard display.
+final activeInsightsProvider =
+    StreamProvider.autoDispose<List<Insight>>((ref) {
+  return ref.watch(insightRepositoryProvider).watchActiveInsights();
 });
 
 LlmClient? _buildLlmClient({
