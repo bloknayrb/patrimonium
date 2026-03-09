@@ -9,7 +9,7 @@ class OpenAiClient implements LlmClient {
   OpenAiClient({
     required this.apiKey,
     required Dio dio,
-    String model = 'gpt-4o-mini',
+    String model = 'gpt-5-mini',
   })  : _dio = dio,
         _model = model;
 

@@ -21,21 +21,37 @@ const _providerLabels = {
 
 /// Default model for each provider.
 const _defaultModels = {
-  'gemini': 'gemini-2.0-flash',
+  'gemini': 'gemini-2.5-flash',
   'claude': 'claude-haiku-4-5-20251001',
-  'openai': 'gpt-4o-mini',
+  'openai': 'gpt-5-mini',
   'ollama': 'llama3.2',
 };
 
 /// Available cloud models per provider.
 const _cloudModels = {
-  'gemini': ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+  'gemini': [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-pro',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.1-pro-preview',
+  ],
   'claude': [
     'claude-haiku-4-5-20251001',
     'claude-sonnet-4-6',
     'claude-opus-4-6',
   ],
-  'openai': ['gpt-4o-mini', 'gpt-4o'],
+  'openai': [
+    'gpt-5-nano',
+    'gpt-5-mini',
+    'gpt-4.1',
+    'gpt-5.4',
+    'gpt-5.4-pro',
+    'o4-mini',
+    'o3',
+    'o3-pro',
+  ],
 };
 
 /// Screen for configuring the active LLM provider, API key, and model.
@@ -48,7 +64,7 @@ class LlmSettingsScreen extends ConsumerStatefulWidget {
 
 class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
   String _selectedProvider = 'gemini';
-  String _selectedModel = 'gemini-2.0-flash';
+  String _selectedModel = 'gemini-2.5-flash';
   final _apiKeyController = TextEditingController();
   bool _isTesting = false;
   bool _isLoading = true;
@@ -77,9 +93,17 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
     setState(() {
       _selectedProvider = provider ?? 'gemini';
       _selectedModel =
-          model ?? _defaultModels[provider ?? 'gemini'] ?? 'gemini-2.0-flash';
+          model ?? _defaultModels[provider ?? 'gemini'] ?? 'gemini-2.5-flash';
       _apiKeyController.text = apiKey ?? '';
       _isLoading = false;
+
+      // If saved model is no longer in the available list, reset to default
+      if (_selectedProvider != 'ollama') {
+        final available = _cloudModels[_selectedProvider] ?? [];
+        if (available.isNotEmpty && !available.contains(_selectedModel)) {
+          _selectedModel = _defaultModels[_selectedProvider] ?? available.first;
+        }
+      }
     });
 
     if (_selectedProvider == 'ollama') {
@@ -344,11 +368,11 @@ class _CostGuidance extends StatelessWidget {
   Widget build(BuildContext context) {
     const guidance = {
       'gemini':
-          'Gemini Flash has a generous free tier. Estimated cost: ~\$0.16/month for 10 queries/day.',
+          'Gemini 2.5 Flash has a generous free tier. Estimated cost: ~\$0.16/month for 10 queries/day.',
       'claude':
           'Claude Haiku is the most cost-effective Anthropic model. Estimated cost: ~\$1.20/month for 10 queries/day.',
       'openai':
-          'GPT-4o-mini is OpenAI\'s budget option. Estimated cost: ~\$0.16/month for 10 queries/day.',
+          'GPT-5-nano is OpenAI\'s budget option. Estimated cost varies by model.',
       'ollama':
           'Ollama runs models locally — completely free. Requires Ollama to be running on your device or local network.',
     };

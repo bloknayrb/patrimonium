@@ -364,7 +364,7 @@ LlmClient? _buildLlmClient({
     case 'gemini':
       return GeminiClient(
         apiKey: apiKey!,
-        model: model ?? 'gemini-2.0-flash',
+        model: model ?? 'gemini-2.5-flash',
       );
     case 'claude':
       return ClaudeClient(
@@ -376,7 +376,7 @@ LlmClient? _buildLlmClient({
       return OpenAiClient(
         apiKey: apiKey!,
         dio: dio,
-        model: model ?? 'gpt-4o-mini',
+        model: model ?? 'gpt-5-mini',
       );
     case 'ollama':
       return OllamaClient(

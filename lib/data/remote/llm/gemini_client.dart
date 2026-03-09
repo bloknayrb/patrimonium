@@ -6,7 +6,7 @@ import 'llm_client.dart';
 class GeminiClient implements LlmClient {
   GeminiClient({
     required this.apiKey,
-    String model = 'gemini-2.0-flash',
+    String model = 'gemini-2.5-flash',
   }) : _modelName = model;
 
   final String apiKey;
