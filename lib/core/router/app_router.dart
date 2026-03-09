@@ -9,6 +9,8 @@ import '../../presentation/features/accounts/accounts_screen.dart';
 import '../../presentation/features/onboarding/onboarding_screen.dart';
 import '../../presentation/features/transactions/transactions_screen.dart';
 import '../../presentation/features/ai_assistant/ai_assistant_screen.dart';
+import '../../presentation/features/ai_assistant/ai_chat_screen.dart';
+import '../../presentation/features/settings/llm_settings_screen.dart';
 import '../../presentation/features/settings/settings_screen.dart';
 import '../../presentation/features/bank_connections/simplefin_setup_screen.dart';
 import '../../presentation/features/bank_connections/account_linking_screen.dart';
@@ -44,6 +46,8 @@ class AppRoutes {
   static const String recurring = '/recurring';
   static const String csvImport = '/import/csv';
   static const String importHistory = '/import/history';
+  static const String llmSettings = '/llm-settings';
+  static const String aiChat = '/ai/chat';
 }
 
 /// Navigator keys for each tab branch.
@@ -169,6 +173,23 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.importHistory,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ImportHistoryScreen(),
+      ),
+
+      // LLM settings (full-screen)
+      GoRoute(
+        path: AppRoutes.llmSettings,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const LlmSettingsScreen(),
+      ),
+
+      // AI chat detail (full-screen, pushed from AI tab)
+      GoRoute(
+        path: '${AppRoutes.aiChat}/:conversationId',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final conversationId = state.pathParameters['conversationId']!;
+          return AiChatScreen(conversationId: conversationId);
+        },
       ),
 
       // Main app with bottom navigation
