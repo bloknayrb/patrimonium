@@ -26,6 +26,7 @@ import '../../domain/usecases/ai/budget_suggestion_service.dart';
 import '../../domain/usecases/ai/chat_service.dart';
 import '../../domain/usecases/ai/context_builder.dart';
 import '../../domain/usecases/ai/insight_generation_service.dart';
+import '../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../data/remote/dio_client.dart';
 import '../../data/remote/llm/claude_client.dart';
 import '../../data/remote/llm/gemini_client.dart';
@@ -346,6 +347,19 @@ final budgetSuggestionServiceProvider =
   return BudgetSuggestionService(
     contextBuilder: ref.watch(contextBuilderProvider),
   );
+});
+
+final retirementParamsExtractorProvider =
+    Provider<RetirementParamsExtractor>((ref) {
+  return RetirementParamsExtractor(
+    conversationRepo: ref.watch(conversationRepositoryProvider),
+  );
+});
+
+/// Purpose of a specific conversation (e.g. 'general', 'retirement').
+final conversationPurposeProvider =
+    FutureProvider.autoDispose.family<String, String>((ref, id) {
+  return ref.watch(conversationRepositoryProvider).getConversationPurpose(id);
 });
 
 /// The active LLM client, or null when no provider is configured.

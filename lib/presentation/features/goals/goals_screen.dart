@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
 import '../../shared/loading/shimmer_loading.dart';
+import '../../shared/utils/snackbar_helpers.dart';
 import 'goals_providers.dart';
 
 /// Goals list screen showing active and completed goals with progress.
@@ -21,6 +23,11 @@ class GoalsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Goals'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.beach_access),
+            tooltip: 'Plan Retirement',
+            onPressed: () => _startRetirementPlan(context, ref),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add goal',
@@ -59,6 +66,27 @@ class GoalsScreen extends ConsumerWidget {
 
   void _navigateToAddGoal(BuildContext context) {
     context.push(AppRoutes.addGoal);
+  }
+
+  Future<void> _startRetirementPlan(BuildContext context, WidgetRef ref) async {
+    final clientAsync = ref.read(activeLlmClientProvider);
+    final client = clientAsync.valueOrNull;
+    if (client == null) {
+      if (context.mounted) {
+        showErrorSnackbar(context, 'Configure an AI provider first in Settings');
+      }
+      return;
+    }
+
+    final convRepo = ref.read(conversationRepositoryProvider);
+    final conversationId = await convRepo.createConversation(
+      client.providerName,
+      client.modelName,
+      purpose: 'retirement',
+    );
+    if (context.mounted) {
+      context.push('${AppRoutes.aiChat}/$conversationId');
+    }
   }
 }
 
@@ -199,7 +227,11 @@ class _GoalCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: InkWell(
         onTap: () {
-          context.push(AppRoutes.editGoal, extra: goal);
+          if (goal.goalType == 'retirement') {
+            context.push('${AppRoutes.retirementGoal}/${goal.id}');
+          } else {
+            context.push(AppRoutes.editGoal, extra: goal);
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -310,6 +342,8 @@ class _GoalCard extends StatelessWidget {
         return 'Debt Payoff';
       case 'net_worth':
         return 'Net Worth Milestone';
+      case 'retirement':
+        return 'Retirement Plan';
       case 'custom':
         return 'Custom Goal';
       default:

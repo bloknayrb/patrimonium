@@ -23,6 +23,7 @@ import '../../presentation/features/budgets/add_edit_budget_screen.dart';
 import '../../presentation/features/budgets/ai_budget_suggestion_screen.dart';
 import '../../presentation/features/goals/goals_screen.dart';
 import '../../presentation/features/goals/add_edit_goal_screen.dart';
+import '../../presentation/features/goals/retirement_goal_detail_screen.dart';
 import '../../presentation/features/recurring/recurring_screen.dart';
 import '../../presentation/features/recurring/add_edit_recurring_screen.dart';
 import '../../presentation/features/import/csv_import_screen.dart';
@@ -65,6 +66,7 @@ class AppRoutes {
   static const String editTransaction = '/transactions/edit';
   static const String addGoal = '/goals/add';
   static const String editGoal = '/goals/edit';
+  static const String retirementGoal = '/goals/retirement';
   static const String addRecurring = '/recurring/add';
   static const String editRecurring = '/recurring/edit';
   static const String addBudget = '/budgets/add';
@@ -256,6 +258,16 @@ GoRouter createAppRouter(Ref ref) {
         path: AppRoutes.goals,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const GoalsScreen(),
+      ),
+
+      // Retirement goal detail
+      GoRoute(
+        path: '${AppRoutes.retirementGoal}/:goalId',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final goalId = state.pathParameters['goalId']!;
+          return RetirementGoalDetailScreen(goalId: goalId);
+        },
       ),
 
       // Recurring transactions (full-screen)

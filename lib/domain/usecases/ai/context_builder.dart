@@ -171,6 +171,10 @@ class ContextBuilder {
           : 0;
       buf.writeln(
           '  ${g.name}: ${_fmt(g.currentAmountCents)} / ${_fmt(g.targetAmountCents)} ($progress%)');
+      if (g.goalType == 'retirement' && g.retirementYear != null) {
+        buf.writeln(
+            '    Retirement target: ${g.retirementYear}, ${_fmt(g.monthlyContributionCents ?? 0)}/mo contribution');
+      }
     }
     return buf.toString();
   }
