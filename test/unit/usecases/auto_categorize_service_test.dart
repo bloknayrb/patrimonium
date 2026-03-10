@@ -347,6 +347,116 @@ void main() {
     });
   });
 
+  group('categorizeWithPreloadedRules', () {
+    test('returns categoryId from cache when confidence >= 0.8', () async {
+      when(() => mockAutoCatRepo.getCacheEntry('STARBUCKS')).thenAnswer(
+        (_) async => _makeCacheEntry(
+          payeeNormalized: 'STARBUCKS',
+          categoryId: 'cat-dining',
+          confidence: 0.9,
+        ),
+      );
+
+      final rules = [
+        _makeRule(
+          id: 'rule-1',
+          priority: 1,
+          payeeContains: 'starbucks',
+          categoryId: 'cat-other',
+        ),
+      ];
+
+      final result = await service.categorizeWithPreloadedRules(
+        'Starbucks',
+        rules,
+      );
+      expect(result, equals('cat-dining'));
+      // Should NOT call getEnabledRules since rules are preloaded
+      verifyNever(() => mockAutoCatRepo.getEnabledRules());
+    });
+
+    test('matches preloaded rules when cache misses', () async {
+      when(() => mockAutoCatRepo.getCacheEntry('WALMART SUPERCENTER'))
+          .thenAnswer((_) async => null);
+
+      final rules = [
+        _makeRule(
+          id: 'rule-1',
+          priority: 1,
+          payeeContains: 'walmart',
+          categoryId: 'cat-groceries',
+        ),
+      ];
+
+      final result = await service.categorizeWithPreloadedRules(
+        'WALMART SUPERCENTER',
+        rules,
+      );
+      expect(result, equals('cat-groceries'));
+      verifyNever(() => mockAutoCatRepo.getEnabledRules());
+    });
+
+    test('returns null when no cache and no rules match', () async {
+      when(() => mockAutoCatRepo.getCacheEntry('UNKNOWN STORE'))
+          .thenAnswer((_) async => null);
+
+      final rules = [
+        _makeRule(
+          id: 'rule-1',
+          priority: 1,
+          payeeExact: 'NETFLIX',
+          categoryId: 'cat-entertainment',
+        ),
+      ];
+
+      final result = await service.categorizeWithPreloadedRules(
+        'Unknown Store',
+        rules,
+      );
+      expect(result, isNull);
+    });
+
+    test('returns same result as categorize() for identical rules', () async {
+      final rules = [
+        _makeRule(
+          id: 'rule-1',
+          priority: 1,
+          payeeContains: 'target',
+          categoryId: 'cat-shopping',
+        ),
+      ];
+
+      // Setup mocks for both paths
+      when(() => mockAutoCatRepo.getCacheEntry('TARGET'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules())
+          .thenAnswer((_) async => rules);
+
+      final resultPreloaded = await service.categorizeWithPreloadedRules(
+        'Target',
+        rules,
+      );
+      final resultNormal = await service.categorize('Target');
+
+      expect(resultPreloaded, equals(resultNormal));
+      expect(resultPreloaded, equals('cat-shopping'));
+    });
+
+    test('returns null for empty payee', () async {
+      final rules = [
+        _makeRule(
+          id: 'rule-1',
+          priority: 1,
+          payeeContains: 'anything',
+          categoryId: 'cat-1',
+        ),
+      ];
+
+      final result = await service.categorizeWithPreloadedRules('', rules);
+      expect(result, isNull);
+    });
+  });
+
   group('categorizeUncategorized', () {
     test('categorizes matching transactions and returns count', () async {
       final txns = [

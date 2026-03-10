@@ -148,6 +148,35 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   }
 
   // ---------------------------------------------------------------------------
+  // Re-parse with account for fuzzy dedup
+  // ---------------------------------------------------------------------------
+
+  Future<void> _reparseWithAccount(String accountId) async {
+    final config = CsvImportConfig(
+      dateColumn: _dateColumn,
+      amountColumn: _amountColumn,
+      payeeColumn: _payeeColumn,
+      categoryColumn: _categoryColumn,
+      notesColumn: _notesColumn,
+      dateFormat: _dateFormat,
+      hasHeader: _hasHeader,
+      negativeIsExpense: _negativeIsExpense,
+    );
+
+    try {
+      final service = ref.read(csvImportServiceProvider);
+      final preview = await service.parseFile(
+        _filePathController.text.trim(),
+        config,
+        accountId: accountId,
+      );
+      if (mounted) setState(() => _preview = preview);
+    } catch (_) {
+      // Silently fail — the import step will catch real errors
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Step 3 → 4: Execute import
   // ---------------------------------------------------------------------------
 
@@ -288,8 +317,11 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               preview: _preview,
               selectedAccountId: _selectedAccountId,
               isImporting: _isImporting,
-              onAccountChanged: (v) =>
-                  setState(() => _selectedAccountId = v),
+              onAccountChanged: (v) {
+                setState(() => _selectedAccountId = v);
+                // Re-parse to update duplicate counts with fuzzy matching
+                if (v != null) _reparseWithAccount(v);
+              },
               onImportPressed: _executeImport,
               onBackPressed: () => setState(() => _currentStep = 1),
             ),
