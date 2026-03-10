@@ -130,8 +130,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
     try {
       final service = ref.read(csvImportServiceProvider);
-      final preview =
-          await service.parseFile(_filePathController.text.trim(), config);
+      final preview = await service.parseFile(
+          _filePathController.text.trim(), config,
+          accountId: _selectedAccountId);
 
       if (!mounted) return;
       setState(() {
