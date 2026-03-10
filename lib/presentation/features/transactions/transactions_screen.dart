@@ -23,6 +23,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   bool _isSearching = false;
 
   @override
+  void deactivate() {
+    // Clear filters and search when navigating away from the transactions tab.
+    // These providers are not autoDispose because the tab stays alive in
+    // StatefulShellRoute.indexedStack — so we reset them here to prevent
+    // stale filters from silently hiding transactions on return.
+    ref.read(transactionFiltersProvider.notifier).state =
+        TransactionFilters.empty;
+    ref.read(transactionSearchQueryProvider.notifier).state = '';
+    _searchController.clear();
+    if (_isSearching) {
+      _isSearching = false;
+    }
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
