@@ -156,6 +156,38 @@ class AutoCategorizeService {
     return true;
   }
 
+  /// Load all enabled rules once. Call before a batch categorization loop.
+  Future<List<AutoCategorizeRule>> loadEnabledRules() {
+    return _autoCatRepo.getEnabledRules();
+  }
+
+  /// Categorize using pre-loaded rules (avoids per-transaction DB query for rules).
+  /// Tier 1 cache lookup is still per-transaction (each payee may differ).
+  Future<String?> categorizeWithPreloadedRules(
+    String payee,
+    List<AutoCategorizeRule> rules, {
+    int? amountCents,
+    String? accountId,
+  }) async {
+    final normalized = normalizePayee(payee);
+    if (normalized.isEmpty) return null;
+
+    // Tier 1: Payee cache lookup (still per-transaction)
+    final cacheEntry = await _autoCatRepo.getCacheEntry(normalized);
+    if (cacheEntry != null && cacheEntry.confidence >= _confidenceThreshold) {
+      return cacheEntry.categoryId;
+    }
+
+    // Tier 2: Match against pre-loaded rules
+    for (final rule in rules) {
+      if (_ruleMatches(rule, normalized, amountCents, accountId)) {
+        return rule.categoryId;
+      }
+    }
+
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Learning
   // ---------------------------------------------------------------------------
@@ -266,11 +298,13 @@ class AutoCategorizeService {
   /// Returns the number of transactions that were categorized.
   Future<int> categorizeUncategorized() async {
     final uncategorized = await _transactionRepo.getUncategorizedTransactions();
+    final rules = await loadEnabledRules();
     var count = 0;
 
     for (final txn in uncategorized) {
-      final categoryId = await categorize(
+      final categoryId = await categorizeWithPreloadedRules(
         txn.payee,
+        rules,
         amountCents: txn.amountCents,
         accountId: txn.accountId,
       );

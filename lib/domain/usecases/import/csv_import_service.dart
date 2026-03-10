@@ -130,10 +130,14 @@ class CsvImportService {
   final AutoCategorizeService _autoCategorizeService;
 
   /// Parse a CSV file and return preview data.
+  ///
+  /// When [accountId] is provided, fuzzy duplicate detection (date + amount)
+  /// is also checked against existing transactions in that account.
   Future<CsvImportPreview> parseFile(
     String filePath,
-    CsvImportConfig config,
-  ) async {
+    CsvImportConfig config, {
+    String? accountId,
+  }) async {
     final file = File(filePath);
     if (!await file.exists()) {
       return CsvImportPreview(
@@ -235,7 +239,12 @@ class CsvImportService {
 
       // Generate external ID for duplicate detection
       final externalId = _generateExternalId(date, signedCents, payee);
-      final isDuplicate = await _transactionRepo.existsByExternalId(externalId);
+      final isDuplicateById = await _transactionRepo.existsByExternalId(externalId);
+      final isDuplicateByFuzzy = accountId != null
+          ? await _transactionRepo.existsByFuzzyMatch(
+              accountId, date.millisecondsSinceEpoch, signedCents)
+          : false;
+      final isDuplicate = isDuplicateById || isDuplicateByFuzzy;
 
       transactions.add(ParsedTransaction(
         rowNumber: rowNumber,
@@ -306,10 +315,13 @@ class CsvImportService {
       if (toInsert.isNotEmpty) {
         await _transactionRepo.insertTransactions(toInsert);
 
-        // Auto-categorize imported transactions
+        // Auto-categorize imported transactions (load rules once for batch)
+        final rules = await _autoCategorizeService.loadEnabledRules();
         for (final companion in toInsert) {
-          final categoryId = await _autoCategorizeService.categorize(
+          final categoryId =
+              await _autoCategorizeService.categorizeWithPreloadedRules(
             companion.payee.value,
+            rules,
             amountCents: companion.amountCents.value,
             accountId: accountId,
           );
