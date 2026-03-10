@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
@@ -85,16 +86,20 @@ Future<void> main() async {
     if (kDebugMode) debugPrint('Sync lock reset failed: $e');
   }
 
-  // TODO: Initialize Sentry
-  // await SentryFlutter.init(
-  //   (options) {
-  //     options.dsn = 'YOUR_SENTRY_DSN';
-  //     options.tracesSampleRate = 0.1;
-  //   },
-  //   appRunner: () => _runApp(database),
-  // );
-
-  _runApp(database);
+  // Initialize Sentry for crash reporting (DSN provided at build time)
+  const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+  if (sentryDsn.isNotEmpty) {
+    await SentryFlutter.init(
+      (options) {
+        options.dsn = sentryDsn;
+        options.tracesSampleRate = 1.0; // 100% — single-user personal app
+        options.environment = kReleaseMode ? 'production' : 'debug';
+      },
+      appRunner: () => _runApp(database),
+    );
+  } else {
+    _runApp(database);
+  }
 }
 
 void _runApp(AppDatabase database) {
