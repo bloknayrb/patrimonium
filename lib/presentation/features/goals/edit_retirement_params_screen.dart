@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
+import '../../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../shared/utils/snackbar_helpers.dart';
 
 /// Focused edit screen for the 4 retirement parameters + desired income.
@@ -72,7 +73,7 @@ class _EditRetirementParamsScreenState
     final incomeCents = _incomeController.text.toCents() ?? 0;
 
     // 25x rule: annual income * 25 = target
-    final targetAmountCents = incomeCents * 12 * 25;
+    final targetAmountCents = RetirementParams.computeTargetAmount(incomeCents);
 
     final repo = ref.read(goalRepositoryProvider);
     await repo.updateGoal(GoalsCompanion(

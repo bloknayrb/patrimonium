@@ -128,7 +128,7 @@ class RetirementGoalDetailScreen extends ConsumerWidget {
                 ),
               ),
               // Legend
-              _ChartLegend(finance: finance),
+              const _ChartLegend(),
               // Inflation note
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -185,35 +185,29 @@ class _SummaryCards extends StatelessWidget {
           _InfoChip(
             label: 'Current Balance',
             value: goal.currentAmountCents.toCurrency(),
-            theme: theme,
           ),
           if (goal.monthlyContributionCents != null)
             _InfoChip(
               label: 'Monthly Contribution',
               value: goal.monthlyContributionCents!.toCurrency(),
-              theme: theme,
             ),
           _InfoChip(
             label: 'Target Year',
             value: '${goal.retirementYear} ($yearsLeft yrs)',
-            theme: theme,
           ),
           if (goal.annualReturnBps != null)
             _InfoChip(
               label: 'Expected Real Return',
               value: '${(goal.annualReturnBps! / 100).toStringAsFixed(1)}%',
-              theme: theme,
             ),
           if (goal.desiredMonthlyIncomeCents != null)
             _InfoChip(
               label: 'Desired Monthly Income',
               value: goal.desiredMonthlyIncomeCents!.toCurrency(),
-              theme: theme,
             ),
           _InfoChip(
             label: 'Target (25x Rule)',
             value: goal.targetAmountCents.toCurrency(),
-            theme: theme,
             highlight: true,
             highlightColor: colorScheme.primaryContainer,
           ),
@@ -227,19 +221,18 @@ class _InfoChip extends StatelessWidget {
   const _InfoChip({
     required this.label,
     required this.value,
-    required this.theme,
     this.highlight = false,
     this.highlightColor,
   });
 
   final String label;
   final String value;
-  final ThemeData theme;
   final bool highlight;
   final Color? highlightColor;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       color: highlight ? highlightColor : null,
       child: Padding(
@@ -269,13 +262,11 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _ChartLegend extends StatelessWidget {
-  const _ChartLegend({required this.finance});
-
-  final FinanceColors finance;
+  const _ChartLegend();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final finance = Theme.of(context).finance;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
@@ -284,19 +275,16 @@ class _ChartLegend extends StatelessWidget {
           _LegendItem(
             color: finance.income.withValues(alpha: 0.08),
             label: '10th–90th',
-            theme: theme,
           ),
           const SizedBox(width: 16),
           _LegendItem(
             color: finance.income.withValues(alpha: 0.18),
             label: '25th–75th',
-            theme: theme,
           ),
           const SizedBox(width: 16),
           _LegendItem(
             color: finance.income,
             label: 'Median',
-            theme: theme,
             isLine: true,
           ),
         ],
@@ -309,17 +297,16 @@ class _LegendItem extends StatelessWidget {
   const _LegendItem({
     required this.color,
     required this.label,
-    required this.theme,
     this.isLine = false,
   });
 
   final Color color;
   final String label;
-  final ThemeData theme;
   final bool isLine;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

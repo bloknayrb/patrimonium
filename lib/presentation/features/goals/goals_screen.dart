@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../data/local/database/app_database.dart';
 import '../../shared/empty_states/empty_state_widget.dart';
 import '../../shared/loading/shimmer_loading.dart';
+import '../../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../shared/utils/snackbar_helpers.dart';
 import 'goals_providers.dart';
 
@@ -82,7 +83,7 @@ class GoalsScreen extends ConsumerWidget {
     final conversationId = await convRepo.createConversation(
       client.providerName,
       client.modelName,
-      purpose: 'retirement',
+      purpose: ConversationPurpose.retirement,
     );
     if (context.mounted) {
       context.push('${AppRoutes.aiChat}/$conversationId');

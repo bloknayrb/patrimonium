@@ -126,7 +126,7 @@ void main() {
         yearsToRetirement: 20,
       );
 
-      final highVol = MonteCarloInput(
+      const highVol = MonteCarloInput(
         currentBalanceCents: 5000000,
         monthlyContributionCents: 50000,
         annualReturn: 0.045,
@@ -145,7 +145,7 @@ void main() {
     });
 
     test('deterministic output with same seed', () {
-      final input = MonteCarloInput(
+      const input = MonteCarloInput(
         currentBalanceCents: 5000000,
         monthlyContributionCents: 50000,
         annualReturn: 0.045,
@@ -164,7 +164,7 @@ void main() {
     });
 
     test('zero starting balance with contributions grows', () {
-      final input = MonteCarloInput(
+      const input = MonteCarloInput(
         currentBalanceCents: 0,
         monthlyContributionCents: 100000, // $1,000/month
         annualReturn: 0.045,

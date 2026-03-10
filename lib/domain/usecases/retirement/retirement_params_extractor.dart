@@ -4,6 +4,13 @@ import '../../../data/remote/llm/llm_client.dart';
 import '../../../data/repositories/conversation_repository.dart';
 import 'retirement_prompts.dart';
 
+/// Conversation purpose constants.
+class ConversationPurpose {
+  ConversationPurpose._();
+  static const general = 'general';
+  static const retirement = 'retirement';
+}
+
 /// Structured retirement parameters extracted from an interview conversation.
 class RetirementParams {
   final String goalName;
@@ -21,6 +28,13 @@ class RetirementParams {
     required this.retirementYear,
     required this.desiredMonthlyIncomeCents,
   });
+
+  /// Target nest egg computed via the 4% withdrawal (25x annual) rule.
+  int get targetAmountCents => computeTargetAmount(desiredMonthlyIncomeCents);
+
+  /// Compute target nest egg from desired monthly income via 4% withdrawal (25x annual) rule.
+  static int computeTargetAmount(int desiredMonthlyIncomeCents) =>
+      desiredMonthlyIncomeCents * 12 * 25;
 }
 
 /// One-shot LLM extraction of retirement parameters from a conversation.

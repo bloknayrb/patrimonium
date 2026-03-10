@@ -25,7 +25,7 @@ void main() {
     registerFallbackValue(const ChatMessage(role: 'user', content: ''));
   });
 
-  Message _makeMessage(String role, String content) {
+  Message makeMessage(String role, String content) {
     return Message(
       id: 'msg-1',
       conversationId: 'conv-1',
@@ -40,11 +40,11 @@ void main() {
     test('extracts valid JSON response', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
         (_) async => [
-          _makeMessage('user', 'I am 30 years old'),
-          _makeMessage('assistant', 'Great! When do you want to retire?'),
-          _makeMessage('user', 'At 65, contributing \$500/month'),
-          _makeMessage('assistant', 'And your risk tolerance?'),
-          _makeMessage('user', 'Moderate. I want \$5000/month in retirement'),
+          makeMessage('user', 'I am 30 years old'),
+          makeMessage('assistant', 'Great! When do you want to retire?'),
+          makeMessage('user', 'At 65, contributing \$500/month'),
+          makeMessage('assistant', 'And your risk tolerance?'),
+          makeMessage('user', 'Moderate. I want \$5000/month in retirement'),
         ],
       );
 
@@ -74,7 +74,7 @@ void main() {
 
     test('handles JSON wrapped in markdown code block', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'plan my retirement')],
+        (_) async => [makeMessage('user', 'plan my retirement')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(
@@ -101,7 +101,7 @@ void main() {
 
     test('returns null for missing required fields', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'test')],
+        (_) async => [makeMessage('user', 'test')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(
@@ -114,7 +114,7 @@ void main() {
 
     test('returns null for malformed JSON', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'test')],
+        (_) async => [makeMessage('user', 'test')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(
@@ -136,7 +136,7 @@ void main() {
 
     test('rejects retirement year in the past', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'test')],
+        (_) async => [makeMessage('user', 'test')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(
@@ -158,7 +158,7 @@ void main() {
 
     test('rejects out-of-bounds return rate', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'test')],
+        (_) async => [makeMessage('user', 'test')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(
@@ -181,7 +181,7 @@ void main() {
 
     test('rejects negative contribution', () async {
       when(() => mockConvRepo.getMessages('conv-1')).thenAnswer(
-        (_) async => [_makeMessage('user', 'test')],
+        (_) async => [makeMessage('user', 'test')],
       );
 
       when(() => mockClient.complete(any(), any())).thenAnswer(

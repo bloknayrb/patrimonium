@@ -356,12 +356,6 @@ final retirementParamsExtractorProvider =
   );
 });
 
-/// Purpose of a specific conversation (e.g. 'general', 'retirement').
-final conversationPurposeProvider =
-    FutureProvider.autoDispose.family<String, String>((ref, id) {
-  return ref.watch(conversationRepositoryProvider).getConversationPurpose(id);
-});
-
 /// The active LLM client, or null when no provider is configured.
 ///
 /// Async because it reads from secure storage. Invalidate via

@@ -8,6 +8,7 @@ import '../../../core/di/providers.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/local/database/app_database.dart';
+import '../../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../../domain/usecases/retirement/retirement_prompts.dart';
 import '../../shared/utils/snackbar_helpers.dart';
 import 'ai_assistant_providers.dart';
@@ -28,12 +29,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _scrollController = ScrollController();
   int _prevMessageCount = 0;
   bool _isCreatingPlan = false;
+  String _purpose = ConversationPurpose.general;
 
   @override
   void initState() {
     super.initState();
+    // Load purpose once — it's immutable after creation
+    _loadPurpose();
     // Show financial disclaimer on first open (once per screen instance)
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowDisclaimer());
+  }
+
+  Future<void> _loadPurpose() async {
+    final convRepo = ref.read(conversationRepositoryProvider);
+    final purpose = await convRepo.getConversationPurpose(widget.conversationId);
+    if (mounted) setState(() => _purpose = purpose);
   }
 
   @override
@@ -72,7 +82,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   /// Get the system prompt override for retirement conversations.
   String? _getSystemPromptOverride(String purpose) {
-    if (purpose == 'retirement') return retirementInterviewPrompt;
+    if (purpose == ConversationPurpose.retirement) {
+      return retirementInterviewPrompt;
+    }
     return null;
   }
 
@@ -161,9 +173,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         return;
       }
 
-      // Compute target amount: 25x annual rule (4% withdrawal)
-      final targetAmountCents = params.desiredMonthlyIncomeCents * 12 * 25;
-
       // Create the retirement goal
       final goalId = const Uuid().v4();
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -172,7 +181,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         id: Value(goalId),
         name: Value(params.goalName),
         goalType: const Value('retirement'),
-        targetAmountCents: Value(targetAmountCents),
+        targetAmountCents: Value(params.targetAmountCents),
         currentAmountCents: const Value(0),
         icon: const Value('trending_up'),
         color: Value(Colors.teal.toARGB32()),
@@ -203,11 +212,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
     final isStreaming = ref.watch(isStreamingProvider);
     final streamingText = ref.watch(streamingTextProvider);
-    final purposeAsync = ref.watch(
-      conversationPurposeProvider(widget.conversationId),
-    );
-    final purpose = purposeAsync.valueOrNull ?? 'general';
-    final isRetirement = purpose == 'retirement';
+    final isRetirement = _purpose == ConversationPurpose.retirement;
 
     // Clear streaming state once the DB message arrives
     ref.listen(messagesProvider(widget.conversationId), (prev, next) {
@@ -305,7 +310,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           const Divider(height: 1),
           ChatInputBar(
             isStreaming: isStreaming,
-            onSend: (text) => _sendMessage(text, purpose: purpose),
+            onSend: (text) => _sendMessage(text, purpose: _purpose),
           ),
         ],
       ),

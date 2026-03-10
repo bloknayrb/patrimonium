@@ -26,23 +26,36 @@ final goalStreamProvider = StreamProvider.autoDispose.family<Goal?, String>((ref
   return ref.watch(goalRepositoryProvider).watchGoalById(id);
 });
 
+/// Tuple of retirement-relevant fields for Monte Carlo input.
+/// Used by [monteCarloProvider] to avoid re-simulating on unrelated goal changes.
+typedef _RetirementFields = (int balance, int? contribution, int? returnBps, int? volBps, int? year);
+
 /// Monte Carlo simulation results for a retirement goal.
 /// Runs off the UI thread via Isolate.run().
+/// Only recomputes when retirement-specific fields change (not name, color, etc.).
 final monteCarloProvider =
     FutureProvider.autoDispose.family<MonteCarloResult?, String>((ref, goalId) async {
-  final goal = await ref.watch(goalStreamProvider(goalId).future);
-  if (goal == null) return null;
+  final fields = await ref.watch(
+    goalStreamProvider(goalId).selectAsync((goal) {
+      if (goal == null) return null;
+      return (
+        goal.currentAmountCents,
+        goal.monthlyContributionCents,
+        goal.annualReturnBps,
+        goal.annualVolatilityBps,
+        goal.retirementYear,
+      );
+    }),
+  );
 
-  final contribution = goal.monthlyContributionCents;
-  final returnBps = goal.annualReturnBps;
-  final volBps = goal.annualVolatilityBps;
-  final year = goal.retirementYear;
+  if (fields == null) return null;
+  final (balance, contribution, returnBps, volBps, year) = fields;
   if (contribution == null || returnBps == null || volBps == null || year == null) {
     return null;
   }
 
   final input = MonteCarloInput(
-    currentBalanceCents: goal.currentAmountCents,
+    currentBalanceCents: balance,
     monthlyContributionCents: contribution,
     annualReturn: returnBps / 10000.0,
     annualVolatility: volBps / 10000.0,

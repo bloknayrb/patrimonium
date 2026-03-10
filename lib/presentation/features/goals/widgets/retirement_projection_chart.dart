@@ -88,7 +88,7 @@ class RetirementProjectionChart extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: Text(
-                      _compactCurrency(value.round()),
+                      value.round().toCompactCurrency(),
                       style: theme.textTheme.labelSmall,
                     ),
                   );
@@ -207,17 +207,5 @@ class RetirementProjectionChart extends StatelessWidget {
     if (count <= 20) return 5;
     if (count <= 40) return 10;
     return (count / 5).roundToDouble();
-  }
-
-  /// Compact currency: $1.2M, $500K, $50K
-  static String _compactCurrency(int cents) {
-    final dollars = cents / 100;
-    if (dollars >= 1000000) {
-      return '\$${(dollars / 1000000).toStringAsFixed(1)}M';
-    }
-    if (dollars >= 1000) {
-      return '\$${(dollars / 1000).toStringAsFixed(0)}K';
-    }
-    return '\$${dollars.toStringAsFixed(0)}';
   }
 }
