@@ -27,14 +27,15 @@ A personal finance management app built with Flutter, featuring local-first data
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" width="200" alt="Dashboard">
-  <img src="docs/screenshots/accounts.png" width="200" alt="Accounts">
-  <img src="docs/screenshots/transactions.png" width="200" alt="Transactions">
-  <img src="docs/screenshots/settings.png" width="200" alt="Settings">
+  <img src="docs/screenshots/dashboard.png" width="180" alt="Dashboard">
+  <img src="docs/screenshots/accounts.png" width="180" alt="Accounts">
+  <img src="docs/screenshots/transactions.png" width="180" alt="Transactions">
+  <img src="docs/screenshots/ai.png" width="180" alt="AI Assistant">
+  <img src="docs/screenshots/settings.png" width="180" alt="Settings">
 </p>
 
 <p align="center">
-  <em>Dashboard &bull; Accounts &bull; Transactions &bull; Settings</em>
+  <em>Dashboard &bull; Accounts &bull; Transactions &bull; AI Assistant &bull; Settings</em>
 </p>
 
 ## Platforms
