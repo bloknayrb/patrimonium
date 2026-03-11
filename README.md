@@ -1,4 +1,4 @@
-# Patrimonium
+# Money Money
 
 [![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
 
