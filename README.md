@@ -16,8 +16,10 @@ A personal finance management app built with Flutter, featuring local-first data
 - **CSV Import** — Column mapping, preview, and import history
 - **Budgets** — Budget tracking with category-based spending limits
 - **Goals** — Financial goal tracking with progress monitoring
+- **Retirement Projections** — Monte Carlo simulation with percentile bands, configured via AI-powered conversational interview
 - **Recurring Transactions** — Automatic detection of recurring income and expenses
 - **Auto-Categorization** — Two-tier system with 300 default merchant rules and learned mappings from manual assignments
+- **AI Assistant** — Natural language interaction for insights and automated parameter extraction (Retirement, Budgeting)
 - **Data Export** — CSV export for accounts and transactions
 - **Material 3 Theming** — Dynamic color support with semantic finance colors (income=green, expense=red)
 - **Offline-First** — All data stored locally in SQLite via Drift ORM
@@ -85,7 +87,7 @@ flutter build apk --release
 |-------|--------|-------------|
 | Phase 1 — Foundation | Complete | Database, auth, theme, repositories, routing, settings |
 | Phase 2 — Accounts & Transactions | Complete | Accounts CRUD, transactions CRUD, dashboard, category picker |
-| Phase 3 — Bank Connectivity | In Progress | SimpleFIN sync, CSV import, budgets, goals, recurring detection, auto-categorization, AI/LLM assistant done. Remaining: auto-categorization management UI, Supabase sync, OFX import |
+| Phase 3 — Bank Connectivity | In Progress | SimpleFIN sync, CSV import, budgets, goals, recurring detection, auto-categorization, AI assistant, and retirement projections (Monte Carlo) complete. Remaining: auto-categorization management UI, Supabase sync, OFX import |
 
 ## Dev Data Seeder
 

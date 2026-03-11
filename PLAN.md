@@ -7,10 +7,10 @@
 | OFX Import | Planned |
 | Recurring transaction detection | Implemented |
 | Budget management screens | Implemented |
-| Goal tracking screens | Implemented |
+| Goal tracking screens | Implemented (including Monte Carlo charts) |
 | Investment holdings (via SimpleFIN sync) | Implemented |
 | Auto-categorization rules UI | Planned |
-| AI/LLM integration | Planned |
+| AI assistant (interviews + insights) | Implemented |
 | Supabase sync | Planned |
 
 ---
