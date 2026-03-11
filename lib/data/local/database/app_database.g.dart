@@ -4390,6 +4390,60 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _monthlyContributionCentsMeta =
+      const VerificationMeta('monthlyContributionCents');
+  @override
+  late final GeneratedColumn<int> monthlyContributionCents =
+      GeneratedColumn<int>(
+        'monthly_contribution_cents',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _annualReturnBpsMeta = const VerificationMeta(
+    'annualReturnBps',
+  );
+  @override
+  late final GeneratedColumn<int> annualReturnBps = GeneratedColumn<int>(
+    'annual_return_bps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _annualVolatilityBpsMeta =
+      const VerificationMeta('annualVolatilityBps');
+  @override
+  late final GeneratedColumn<int> annualVolatilityBps = GeneratedColumn<int>(
+    'annual_volatility_bps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _retirementYearMeta = const VerificationMeta(
+    'retirementYear',
+  );
+  @override
+  late final GeneratedColumn<int> retirementYear = GeneratedColumn<int>(
+    'retirement_year',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _desiredMonthlyIncomeCentsMeta =
+      const VerificationMeta('desiredMonthlyIncomeCents');
+  @override
+  late final GeneratedColumn<int> desiredMonthlyIncomeCents =
+      GeneratedColumn<int>(
+        'desired_monthly_income_cents',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4449,6 +4503,11 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     color,
     isCompleted,
     completedAt,
+    monthlyContributionCents,
+    annualReturnBps,
+    annualVolatilityBps,
+    retirementYear,
+    desiredMonthlyIncomeCents,
     createdAt,
     updatedAt,
     version,
@@ -4556,6 +4615,51 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         ),
       );
     }
+    if (data.containsKey('monthly_contribution_cents')) {
+      context.handle(
+        _monthlyContributionCentsMeta,
+        monthlyContributionCents.isAcceptableOrUnknown(
+          data['monthly_contribution_cents']!,
+          _monthlyContributionCentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('annual_return_bps')) {
+      context.handle(
+        _annualReturnBpsMeta,
+        annualReturnBps.isAcceptableOrUnknown(
+          data['annual_return_bps']!,
+          _annualReturnBpsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('annual_volatility_bps')) {
+      context.handle(
+        _annualVolatilityBpsMeta,
+        annualVolatilityBps.isAcceptableOrUnknown(
+          data['annual_volatility_bps']!,
+          _annualVolatilityBpsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('retirement_year')) {
+      context.handle(
+        _retirementYearMeta,
+        retirementYear.isAcceptableOrUnknown(
+          data['retirement_year']!,
+          _retirementYearMeta,
+        ),
+      );
+    }
+    if (data.containsKey('desired_monthly_income_cents')) {
+      context.handle(
+        _desiredMonthlyIncomeCentsMeta,
+        desiredMonthlyIncomeCents.isAcceptableOrUnknown(
+          data['desired_monthly_income_cents']!,
+          _desiredMonthlyIncomeCentsMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4637,6 +4741,26 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.int,
         data['${effectivePrefix}completed_at'],
       ),
+      monthlyContributionCents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}monthly_contribution_cents'],
+      ),
+      annualReturnBps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}annual_return_bps'],
+      ),
+      annualVolatilityBps: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}annual_volatility_bps'],
+      ),
+      retirementYear: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retirement_year'],
+      ),
+      desiredMonthlyIncomeCents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}desired_monthly_income_cents'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -4674,6 +4798,11 @@ class Goal extends DataClass implements Insertable<Goal> {
   final int color;
   final bool isCompleted;
   final int? completedAt;
+  final int? monthlyContributionCents;
+  final int? annualReturnBps;
+  final int? annualVolatilityBps;
+  final int? retirementYear;
+  final int? desiredMonthlyIncomeCents;
   final int createdAt;
   final int updatedAt;
   final int version;
@@ -4690,6 +4819,11 @@ class Goal extends DataClass implements Insertable<Goal> {
     required this.color,
     required this.isCompleted,
     this.completedAt,
+    this.monthlyContributionCents,
+    this.annualReturnBps,
+    this.annualVolatilityBps,
+    this.retirementYear,
+    this.desiredMonthlyIncomeCents,
     required this.createdAt,
     required this.updatedAt,
     required this.version,
@@ -4714,6 +4848,25 @@ class Goal extends DataClass implements Insertable<Goal> {
     map['is_completed'] = Variable<bool>(isCompleted);
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<int>(completedAt);
+    }
+    if (!nullToAbsent || monthlyContributionCents != null) {
+      map['monthly_contribution_cents'] = Variable<int>(
+        monthlyContributionCents,
+      );
+    }
+    if (!nullToAbsent || annualReturnBps != null) {
+      map['annual_return_bps'] = Variable<int>(annualReturnBps);
+    }
+    if (!nullToAbsent || annualVolatilityBps != null) {
+      map['annual_volatility_bps'] = Variable<int>(annualVolatilityBps);
+    }
+    if (!nullToAbsent || retirementYear != null) {
+      map['retirement_year'] = Variable<int>(retirementYear);
+    }
+    if (!nullToAbsent || desiredMonthlyIncomeCents != null) {
+      map['desired_monthly_income_cents'] = Variable<int>(
+        desiredMonthlyIncomeCents,
+      );
     }
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
@@ -4741,6 +4894,22 @@ class Goal extends DataClass implements Insertable<Goal> {
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(completedAt),
+      monthlyContributionCents: monthlyContributionCents == null && nullToAbsent
+          ? const Value.absent()
+          : Value(monthlyContributionCents),
+      annualReturnBps: annualReturnBps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(annualReturnBps),
+      annualVolatilityBps: annualVolatilityBps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(annualVolatilityBps),
+      retirementYear: retirementYear == null && nullToAbsent
+          ? const Value.absent()
+          : Value(retirementYear),
+      desiredMonthlyIncomeCents:
+          desiredMonthlyIncomeCents == null && nullToAbsent
+          ? const Value.absent()
+          : Value(desiredMonthlyIncomeCents),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       version: Value(version),
@@ -4765,6 +4934,17 @@ class Goal extends DataClass implements Insertable<Goal> {
       color: serializer.fromJson<int>(json['color']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       completedAt: serializer.fromJson<int?>(json['completedAt']),
+      monthlyContributionCents: serializer.fromJson<int?>(
+        json['monthlyContributionCents'],
+      ),
+      annualReturnBps: serializer.fromJson<int?>(json['annualReturnBps']),
+      annualVolatilityBps: serializer.fromJson<int?>(
+        json['annualVolatilityBps'],
+      ),
+      retirementYear: serializer.fromJson<int?>(json['retirementYear']),
+      desiredMonthlyIncomeCents: serializer.fromJson<int?>(
+        json['desiredMonthlyIncomeCents'],
+      ),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       version: serializer.fromJson<int>(json['version']),
@@ -4786,6 +4966,15 @@ class Goal extends DataClass implements Insertable<Goal> {
       'color': serializer.toJson<int>(color),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'completedAt': serializer.toJson<int?>(completedAt),
+      'monthlyContributionCents': serializer.toJson<int?>(
+        monthlyContributionCents,
+      ),
+      'annualReturnBps': serializer.toJson<int?>(annualReturnBps),
+      'annualVolatilityBps': serializer.toJson<int?>(annualVolatilityBps),
+      'retirementYear': serializer.toJson<int?>(retirementYear),
+      'desiredMonthlyIncomeCents': serializer.toJson<int?>(
+        desiredMonthlyIncomeCents,
+      ),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'version': serializer.toJson<int>(version),
@@ -4805,6 +4994,11 @@ class Goal extends DataClass implements Insertable<Goal> {
     int? color,
     bool? isCompleted,
     Value<int?> completedAt = const Value.absent(),
+    Value<int?> monthlyContributionCents = const Value.absent(),
+    Value<int?> annualReturnBps = const Value.absent(),
+    Value<int?> annualVolatilityBps = const Value.absent(),
+    Value<int?> retirementYear = const Value.absent(),
+    Value<int?> desiredMonthlyIncomeCents = const Value.absent(),
     int? createdAt,
     int? updatedAt,
     int? version,
@@ -4823,6 +5017,21 @@ class Goal extends DataClass implements Insertable<Goal> {
     color: color ?? this.color,
     isCompleted: isCompleted ?? this.isCompleted,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    monthlyContributionCents: monthlyContributionCents.present
+        ? monthlyContributionCents.value
+        : this.monthlyContributionCents,
+    annualReturnBps: annualReturnBps.present
+        ? annualReturnBps.value
+        : this.annualReturnBps,
+    annualVolatilityBps: annualVolatilityBps.present
+        ? annualVolatilityBps.value
+        : this.annualVolatilityBps,
+    retirementYear: retirementYear.present
+        ? retirementYear.value
+        : this.retirementYear,
+    desiredMonthlyIncomeCents: desiredMonthlyIncomeCents.present
+        ? desiredMonthlyIncomeCents.value
+        : this.desiredMonthlyIncomeCents,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     version: version ?? this.version,
@@ -4853,6 +5062,21 @@ class Goal extends DataClass implements Insertable<Goal> {
       completedAt: data.completedAt.present
           ? data.completedAt.value
           : this.completedAt,
+      monthlyContributionCents: data.monthlyContributionCents.present
+          ? data.monthlyContributionCents.value
+          : this.monthlyContributionCents,
+      annualReturnBps: data.annualReturnBps.present
+          ? data.annualReturnBps.value
+          : this.annualReturnBps,
+      annualVolatilityBps: data.annualVolatilityBps.present
+          ? data.annualVolatilityBps.value
+          : this.annualVolatilityBps,
+      retirementYear: data.retirementYear.present
+          ? data.retirementYear.value
+          : this.retirementYear,
+      desiredMonthlyIncomeCents: data.desiredMonthlyIncomeCents.present
+          ? data.desiredMonthlyIncomeCents.value
+          : this.desiredMonthlyIncomeCents,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       version: data.version.present ? data.version.value : this.version,
@@ -4876,6 +5100,11 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('color: $color, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('completedAt: $completedAt, ')
+          ..write('monthlyContributionCents: $monthlyContributionCents, ')
+          ..write('annualReturnBps: $annualReturnBps, ')
+          ..write('annualVolatilityBps: $annualVolatilityBps, ')
+          ..write('retirementYear: $retirementYear, ')
+          ..write('desiredMonthlyIncomeCents: $desiredMonthlyIncomeCents, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -4897,6 +5126,11 @@ class Goal extends DataClass implements Insertable<Goal> {
     color,
     isCompleted,
     completedAt,
+    monthlyContributionCents,
+    annualReturnBps,
+    annualVolatilityBps,
+    retirementYear,
+    desiredMonthlyIncomeCents,
     createdAt,
     updatedAt,
     version,
@@ -4917,6 +5151,11 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.color == this.color &&
           other.isCompleted == this.isCompleted &&
           other.completedAt == this.completedAt &&
+          other.monthlyContributionCents == this.monthlyContributionCents &&
+          other.annualReturnBps == this.annualReturnBps &&
+          other.annualVolatilityBps == this.annualVolatilityBps &&
+          other.retirementYear == this.retirementYear &&
+          other.desiredMonthlyIncomeCents == this.desiredMonthlyIncomeCents &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.version == this.version &&
@@ -4935,6 +5174,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<int> color;
   final Value<bool> isCompleted;
   final Value<int?> completedAt;
+  final Value<int?> monthlyContributionCents;
+  final Value<int?> annualReturnBps;
+  final Value<int?> annualVolatilityBps;
+  final Value<int?> retirementYear;
+  final Value<int?> desiredMonthlyIncomeCents;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> version;
@@ -4952,6 +5196,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.color = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.monthlyContributionCents = const Value.absent(),
+    this.annualReturnBps = const Value.absent(),
+    this.annualVolatilityBps = const Value.absent(),
+    this.retirementYear = const Value.absent(),
+    this.desiredMonthlyIncomeCents = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.version = const Value.absent(),
@@ -4970,6 +5219,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     required int color,
     this.isCompleted = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.monthlyContributionCents = const Value.absent(),
+    this.annualReturnBps = const Value.absent(),
+    this.annualVolatilityBps = const Value.absent(),
+    this.retirementYear = const Value.absent(),
+    this.desiredMonthlyIncomeCents = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.version = const Value.absent(),
@@ -4995,6 +5249,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<int>? color,
     Expression<bool>? isCompleted,
     Expression<int>? completedAt,
+    Expression<int>? monthlyContributionCents,
+    Expression<int>? annualReturnBps,
+    Expression<int>? annualVolatilityBps,
+    Expression<int>? retirementYear,
+    Expression<int>? desiredMonthlyIncomeCents,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? version,
@@ -5014,6 +5273,14 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (color != null) 'color': color,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (completedAt != null) 'completed_at': completedAt,
+      if (monthlyContributionCents != null)
+        'monthly_contribution_cents': monthlyContributionCents,
+      if (annualReturnBps != null) 'annual_return_bps': annualReturnBps,
+      if (annualVolatilityBps != null)
+        'annual_volatility_bps': annualVolatilityBps,
+      if (retirementYear != null) 'retirement_year': retirementYear,
+      if (desiredMonthlyIncomeCents != null)
+        'desired_monthly_income_cents': desiredMonthlyIncomeCents,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (version != null) 'version': version,
@@ -5034,6 +5301,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<int>? color,
     Value<bool>? isCompleted,
     Value<int?>? completedAt,
+    Value<int?>? monthlyContributionCents,
+    Value<int?>? annualReturnBps,
+    Value<int?>? annualVolatilityBps,
+    Value<int?>? retirementYear,
+    Value<int?>? desiredMonthlyIncomeCents,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? version,
@@ -5052,6 +5324,13 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       color: color ?? this.color,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
+      monthlyContributionCents:
+          monthlyContributionCents ?? this.monthlyContributionCents,
+      annualReturnBps: annualReturnBps ?? this.annualReturnBps,
+      annualVolatilityBps: annualVolatilityBps ?? this.annualVolatilityBps,
+      retirementYear: retirementYear ?? this.retirementYear,
+      desiredMonthlyIncomeCents:
+          desiredMonthlyIncomeCents ?? this.desiredMonthlyIncomeCents,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
@@ -5096,6 +5375,25 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (completedAt.present) {
       map['completed_at'] = Variable<int>(completedAt.value);
     }
+    if (monthlyContributionCents.present) {
+      map['monthly_contribution_cents'] = Variable<int>(
+        monthlyContributionCents.value,
+      );
+    }
+    if (annualReturnBps.present) {
+      map['annual_return_bps'] = Variable<int>(annualReturnBps.value);
+    }
+    if (annualVolatilityBps.present) {
+      map['annual_volatility_bps'] = Variable<int>(annualVolatilityBps.value);
+    }
+    if (retirementYear.present) {
+      map['retirement_year'] = Variable<int>(retirementYear.value);
+    }
+    if (desiredMonthlyIncomeCents.present) {
+      map['desired_monthly_income_cents'] = Variable<int>(
+        desiredMonthlyIncomeCents.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -5128,6 +5426,11 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('color: $color, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('completedAt: $completedAt, ')
+          ..write('monthlyContributionCents: $monthlyContributionCents, ')
+          ..write('annualReturnBps: $annualReturnBps, ')
+          ..write('annualVolatilityBps: $annualVolatilityBps, ')
+          ..write('retirementYear: $retirementYear, ')
+          ..write('desiredMonthlyIncomeCents: $desiredMonthlyIncomeCents, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -8330,6 +8633,18 @@ class $ConversationsTable extends Conversations
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _purposeMeta = const VerificationMeta(
+    'purpose',
+  );
+  @override
+  late final GeneratedColumn<String> purpose = GeneratedColumn<String>(
+    'purpose',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('general'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -8382,6 +8697,7 @@ class $ConversationsTable extends Conversations
     title,
     provider,
     model,
+    purpose,
     createdAt,
     updatedAt,
     version,
@@ -8425,6 +8741,12 @@ class $ConversationsTable extends Conversations
       );
     } else if (isInserting) {
       context.missing(_modelMeta);
+    }
+    if (data.containsKey('purpose')) {
+      context.handle(
+        _purposeMeta,
+        purpose.isAcceptableOrUnknown(data['purpose']!, _purposeMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -8479,6 +8801,10 @@ class $ConversationsTable extends Conversations
         DriftSqlType.string,
         data['${effectivePrefix}model'],
       )!,
+      purpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}purpose'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -8509,6 +8835,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
   final String? title;
   final String provider;
   final String model;
+  final String purpose;
   final int createdAt;
   final int updatedAt;
   final int version;
@@ -8518,6 +8845,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     this.title,
     required this.provider,
     required this.model,
+    required this.purpose,
     required this.createdAt,
     required this.updatedAt,
     required this.version,
@@ -8532,6 +8860,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     }
     map['provider'] = Variable<String>(provider);
     map['model'] = Variable<String>(model);
+    map['purpose'] = Variable<String>(purpose);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     map['version'] = Variable<int>(version);
@@ -8547,6 +8876,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           : Value(title),
       provider: Value(provider),
       model: Value(model),
+      purpose: Value(purpose),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       version: Value(version),
@@ -8564,6 +8894,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       title: serializer.fromJson<String?>(json['title']),
       provider: serializer.fromJson<String>(json['provider']),
       model: serializer.fromJson<String>(json['model']),
+      purpose: serializer.fromJson<String>(json['purpose']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       version: serializer.fromJson<int>(json['version']),
@@ -8578,6 +8909,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       'title': serializer.toJson<String?>(title),
       'provider': serializer.toJson<String>(provider),
       'model': serializer.toJson<String>(model),
+      'purpose': serializer.toJson<String>(purpose),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'version': serializer.toJson<int>(version),
@@ -8590,6 +8922,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     Value<String?> title = const Value.absent(),
     String? provider,
     String? model,
+    String? purpose,
     int? createdAt,
     int? updatedAt,
     int? version,
@@ -8599,6 +8932,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     title: title.present ? title.value : this.title,
     provider: provider ?? this.provider,
     model: model ?? this.model,
+    purpose: purpose ?? this.purpose,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     version: version ?? this.version,
@@ -8610,6 +8944,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
       title: data.title.present ? data.title.value : this.title,
       provider: data.provider.present ? data.provider.value : this.provider,
       model: data.model.present ? data.model.value : this.model,
+      purpose: data.purpose.present ? data.purpose.value : this.purpose,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       version: data.version.present ? data.version.value : this.version,
@@ -8626,6 +8961,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           ..write('title: $title, ')
           ..write('provider: $provider, ')
           ..write('model: $model, ')
+          ..write('purpose: $purpose, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -8640,6 +8976,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
     title,
     provider,
     model,
+    purpose,
     createdAt,
     updatedAt,
     version,
@@ -8653,6 +8990,7 @@ class Conversation extends DataClass implements Insertable<Conversation> {
           other.title == this.title &&
           other.provider == this.provider &&
           other.model == this.model &&
+          other.purpose == this.purpose &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.version == this.version &&
@@ -8664,6 +9002,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
   final Value<String?> title;
   final Value<String> provider;
   final Value<String> model;
+  final Value<String> purpose;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> version;
@@ -8674,6 +9013,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     this.title = const Value.absent(),
     this.provider = const Value.absent(),
     this.model = const Value.absent(),
+    this.purpose = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.version = const Value.absent(),
@@ -8685,6 +9025,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     this.title = const Value.absent(),
     required String provider,
     required String model,
+    this.purpose = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.version = const Value.absent(),
@@ -8700,6 +9041,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     Expression<String>? title,
     Expression<String>? provider,
     Expression<String>? model,
+    Expression<String>? purpose,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? version,
@@ -8711,6 +9053,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       if (title != null) 'title': title,
       if (provider != null) 'provider': provider,
       if (model != null) 'model': model,
+      if (purpose != null) 'purpose': purpose,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (version != null) 'version': version,
@@ -8724,6 +9067,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     Value<String?>? title,
     Value<String>? provider,
     Value<String>? model,
+    Value<String>? purpose,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? version,
@@ -8735,6 +9079,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
       title: title ?? this.title,
       provider: provider ?? this.provider,
       model: model ?? this.model,
+      purpose: purpose ?? this.purpose,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
@@ -8757,6 +9102,9 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
     }
     if (model.present) {
       map['model'] = Variable<String>(model.value);
+    }
+    if (purpose.present) {
+      map['purpose'] = Variable<String>(purpose.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -8783,6 +9131,7 @@ class ConversationsCompanion extends UpdateCompanion<Conversation> {
           ..write('title: $title, ')
           ..write('provider: $provider, ')
           ..write('model: $model, ')
+          ..write('purpose: $purpose, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -14535,6 +14884,11 @@ typedef $$GoalsTableCreateCompanionBuilder =
       required int color,
       Value<bool> isCompleted,
       Value<int?> completedAt,
+      Value<int?> monthlyContributionCents,
+      Value<int?> annualReturnBps,
+      Value<int?> annualVolatilityBps,
+      Value<int?> retirementYear,
+      Value<int?> desiredMonthlyIncomeCents,
       required int createdAt,
       required int updatedAt,
       Value<int> version,
@@ -14554,6 +14908,11 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<int> color,
       Value<bool> isCompleted,
       Value<int?> completedAt,
+      Value<int?> monthlyContributionCents,
+      Value<int?> annualReturnBps,
+      Value<int?> annualVolatilityBps,
+      Value<int?> retirementYear,
+      Value<int?> desiredMonthlyIncomeCents,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> version,
@@ -14621,6 +14980,31 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<int> get completedAt => $composableBuilder(
     column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get monthlyContributionCents => $composableBuilder(
+    column: $table.monthlyContributionCents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get annualReturnBps => $composableBuilder(
+    column: $table.annualReturnBps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get annualVolatilityBps => $composableBuilder(
+    column: $table.annualVolatilityBps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retirementYear => $composableBuilder(
+    column: $table.retirementYear,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get desiredMonthlyIncomeCents => $composableBuilder(
+    column: $table.desiredMonthlyIncomeCents,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14709,6 +15093,31 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get monthlyContributionCents => $composableBuilder(
+    column: $table.monthlyContributionCents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get annualReturnBps => $composableBuilder(
+    column: $table.annualReturnBps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get annualVolatilityBps => $composableBuilder(
+    column: $table.annualVolatilityBps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retirementYear => $composableBuilder(
+    column: $table.retirementYear,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get desiredMonthlyIncomeCents => $composableBuilder(
+    column: $table.desiredMonthlyIncomeCents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -14784,6 +15193,31 @@ class $$GoalsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get monthlyContributionCents => $composableBuilder(
+    column: $table.monthlyContributionCents,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get annualReturnBps => $composableBuilder(
+    column: $table.annualReturnBps,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get annualVolatilityBps => $composableBuilder(
+    column: $table.annualVolatilityBps,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get retirementYear => $composableBuilder(
+    column: $table.retirementYear,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get desiredMonthlyIncomeCents => $composableBuilder(
+    column: $table.desiredMonthlyIncomeCents,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -14838,6 +15272,11 @@ class $$GoalsTableTableManager
                 Value<int> color = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int?> completedAt = const Value.absent(),
+                Value<int?> monthlyContributionCents = const Value.absent(),
+                Value<int?> annualReturnBps = const Value.absent(),
+                Value<int?> annualVolatilityBps = const Value.absent(),
+                Value<int?> retirementYear = const Value.absent(),
+                Value<int?> desiredMonthlyIncomeCents = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
@@ -14855,6 +15294,11 @@ class $$GoalsTableTableManager
                 color: color,
                 isCompleted: isCompleted,
                 completedAt: completedAt,
+                monthlyContributionCents: monthlyContributionCents,
+                annualReturnBps: annualReturnBps,
+                annualVolatilityBps: annualVolatilityBps,
+                retirementYear: retirementYear,
+                desiredMonthlyIncomeCents: desiredMonthlyIncomeCents,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
@@ -14874,6 +15318,11 @@ class $$GoalsTableTableManager
                 required int color,
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int?> completedAt = const Value.absent(),
+                Value<int?> monthlyContributionCents = const Value.absent(),
+                Value<int?> annualReturnBps = const Value.absent(),
+                Value<int?> annualVolatilityBps = const Value.absent(),
+                Value<int?> retirementYear = const Value.absent(),
+                Value<int?> desiredMonthlyIncomeCents = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> version = const Value.absent(),
@@ -14891,6 +15340,11 @@ class $$GoalsTableTableManager
                 color: color,
                 isCompleted: isCompleted,
                 completedAt: completedAt,
+                monthlyContributionCents: monthlyContributionCents,
+                annualReturnBps: annualReturnBps,
+                annualVolatilityBps: annualVolatilityBps,
+                retirementYear: retirementYear,
+                desiredMonthlyIncomeCents: desiredMonthlyIncomeCents,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
@@ -16514,6 +16968,7 @@ typedef $$ConversationsTableCreateCompanionBuilder =
       Value<String?> title,
       required String provider,
       required String model,
+      Value<String> purpose,
       required int createdAt,
       required int updatedAt,
       Value<int> version,
@@ -16526,6 +16981,7 @@ typedef $$ConversationsTableUpdateCompanionBuilder =
       Value<String?> title,
       Value<String> provider,
       Value<String> model,
+      Value<String> purpose,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> version,
@@ -16559,6 +17015,11 @@ class $$ConversationsTableFilterComposer
 
   ColumnFilters<String> get model => $composableBuilder(
     column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get purpose => $composableBuilder(
+    column: $table.purpose,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16612,6 +17073,11 @@ class $$ConversationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get purpose => $composableBuilder(
+    column: $table.purpose,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -16653,6 +17119,9 @@ class $$ConversationsTableAnnotationComposer
 
   GeneratedColumn<String> get model =>
       $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<String> get purpose =>
+      $composableBuilder(column: $table.purpose, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -16704,6 +17173,7 @@ class $$ConversationsTableTableManager
                 Value<String?> title = const Value.absent(),
                 Value<String> provider = const Value.absent(),
                 Value<String> model = const Value.absent(),
+                Value<String> purpose = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
@@ -16714,6 +17184,7 @@ class $$ConversationsTableTableManager
                 title: title,
                 provider: provider,
                 model: model,
+                purpose: purpose,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
@@ -16726,6 +17197,7 @@ class $$ConversationsTableTableManager
                 Value<String?> title = const Value.absent(),
                 required String provider,
                 required String model,
+                Value<String> purpose = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> version = const Value.absent(),
@@ -16736,6 +17208,7 @@ class $$ConversationsTableTableManager
                 title: title,
                 provider: provider,
                 model: model,
+                purpose: purpose,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,

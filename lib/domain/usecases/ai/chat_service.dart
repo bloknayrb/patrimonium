@@ -62,6 +62,7 @@ class ChatService {
     required LlmClient client,
     required String conversationId,
     required String userMessage,
+    String? systemPromptOverride,
   }) async* {
     if (_isRateLimited()) throw const RateLimitException();
     _callsToday++;
@@ -87,7 +88,8 @@ class ChatService {
     // Stream response, accumulate for DB save
     final buffer = StringBuffer();
     try {
-      await for (final chunk in client.streamComplete(_systemPrompt, messages)) {
+      final prompt = systemPromptOverride ?? _systemPrompt;
+      await for (final chunk in client.streamComplete(prompt, messages)) {
         buffer.write(chunk);
         yield chunk;
       }

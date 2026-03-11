@@ -1,10 +1,16 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/app_router.dart';
+import '../../../data/local/database/app_database.dart';
+import '../../../domain/usecases/retirement/retirement_params_extractor.dart';
+import '../../../domain/usecases/retirement/retirement_prompts.dart';
+import '../../shared/utils/snackbar_helpers.dart';
 import 'ai_assistant_providers.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/chat_message_bubble.dart';
@@ -22,12 +28,22 @@ class AiChatScreen extends ConsumerStatefulWidget {
 class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _scrollController = ScrollController();
   int _prevMessageCount = 0;
+  bool _isCreatingPlan = false;
+  String _purpose = ConversationPurpose.general;
 
   @override
   void initState() {
     super.initState();
+    // Load purpose once — it's immutable after creation
+    _loadPurpose();
     // Show financial disclaimer on first open (once per screen instance)
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowDisclaimer());
+  }
+
+  Future<void> _loadPurpose() async {
+    final convRepo = ref.read(conversationRepositoryProvider);
+    final purpose = await convRepo.getConversationPurpose(widget.conversationId);
+    if (mounted) setState(() => _purpose = purpose);
   }
 
   @override
@@ -64,7 +80,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     });
   }
 
-  Future<void> _sendMessage(String text) async {
+  /// Get the system prompt override for retirement conversations.
+  String? _getSystemPromptOverride(String purpose) {
+    if (purpose == ConversationPurpose.retirement) {
+      return retirementInterviewPrompt;
+    }
+    return null;
+  }
+
+  Future<void> _sendMessage(String text, {String? purpose}) async {
     final clientAsync = ref.read(activeLlmClientProvider);
     final client = clientAsync.valueOrNull;
     if (client == null) {
@@ -92,13 +116,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         client: client,
         conversationId: widget.conversationId,
         userMessage: text,
+        systemPromptOverride: _getSystemPromptOverride(purpose ?? ''),
       )) {
         ref.read(streamingTextProvider.notifier).state += chunk;
         _scrollToBottom();
       }
-      // Stream complete — the ChatService finally block already saved the DB message.
-      // Wait for messagesProvider to reflect the new assistant message, then clear state.
-      // (ref.listen in build() handles this transition)
     } on LLMError catch (e) {
       if (!mounted) return;
       final message = e.message;
@@ -113,7 +135,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               : null,
         ),
       );
-      // Clear streaming state on error (message was partially saved by finally)
       ref.read(isStreamingProvider.notifier).state = false;
       ref.read(streamingTextProvider.notifier).state = '';
     } catch (e) {
@@ -126,11 +147,72 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
   }
 
+  Future<void> _createRetirementPlan() async {
+    final clientAsync = ref.read(activeLlmClientProvider);
+    final client = clientAsync.valueOrNull;
+    if (client == null) {
+      if (mounted) {
+        showErrorSnackbar(context, 'Configure an AI provider first');
+      }
+      return;
+    }
+
+    setState(() => _isCreatingPlan = true);
+
+    try {
+      final extractor = ref.read(retirementParamsExtractorProvider);
+      final params = await extractor.extract(client, widget.conversationId);
+
+      if (!mounted) return;
+
+      if (params == null) {
+        showErrorSnackbar(
+          context,
+          "Couldn't extract your retirement details — try answering a few more questions",
+        );
+        return;
+      }
+
+      // Create the retirement goal
+      final goalId = const Uuid().v4();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final goalRepo = ref.read(goalRepositoryProvider);
+      await goalRepo.insertGoal(GoalsCompanion(
+        id: Value(goalId),
+        name: Value(params.goalName),
+        goalType: const Value('retirement'),
+        targetAmountCents: Value(params.targetAmountCents),
+        currentAmountCents: const Value(0),
+        icon: const Value('trending_up'),
+        color: Value(Colors.teal.toARGB32()),
+        monthlyContributionCents: Value(params.monthlyContributionCents),
+        annualReturnBps: Value(params.annualReturnBps),
+        annualVolatilityBps: Value(params.annualVolatilityBps),
+        retirementYear: Value(params.retirementYear),
+        desiredMonthlyIncomeCents: Value(params.desiredMonthlyIncomeCents),
+        createdAt: Value(now),
+        updatedAt: Value(now),
+      ));
+
+      if (mounted) {
+        showSuccessSnackbar(context, 'Retirement plan created!');
+        context.push('${AppRoutes.retirementGoal}/$goalId');
+      }
+    } catch (e) {
+      if (mounted) {
+        showErrorSnackbar(context, 'Error creating plan: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isCreatingPlan = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
     final isStreaming = ref.watch(isStreamingProvider);
     final streamingText = ref.watch(streamingTextProvider);
+    final isRetirement = _purpose == ConversationPurpose.retirement;
 
     // Clear streaming state once the DB message arrives
     ref.listen(messagesProvider(widget.conversationId), (prev, next) {
@@ -152,14 +234,20 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       _scrollToBottom();
     }
 
+    // Show "Create Plan" button after 4+ messages in retirement mode
+    final showCreatePlan = isRetirement && messageCount >= 4;
+
     return Scaffold(
       appBar: AppBar(
         title: messagesAsync.when(
-          loading: () => const Text('Chat'),
-          error: (_, _) => const Text('Chat'),
+          loading: () => Text(isRetirement ? 'Retirement Planning' : 'Chat'),
+          error: (_, _) => Text(isRetirement ? 'Retirement Planning' : 'Chat'),
           data: (msgs) {
+            if (isRetirement) return const Text('Retirement Planning');
             final conversations = ref.read(conversationsProvider).valueOrNull;
-            final conv = conversations?.where((c) => c.id == widget.conversationId).firstOrNull;
+            final conv = conversations
+                ?.where((c) => c.id == widget.conversationId)
+                .firstOrNull;
             return Text(conv?.title ?? 'New Chat');
           },
         ),
@@ -177,10 +265,12 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     messages.length + (isStreaming ? 1 : 0);
 
                 if (itemCount == 0) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'Ask anything about your finances',
-                      style: TextStyle(color: Colors.grey),
+                      isRetirement
+                          ? "Let's plan your retirement! Send a message to start."
+                          : 'Ask anything about your finances',
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   );
                 }
@@ -210,12 +300,52 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               },
             ),
           ),
+          if (showCreatePlan) ...[
+            const Divider(height: 1),
+            _CreatePlanBar(
+              isCreating: _isCreatingPlan,
+              onCreatePlan: _createRetirementPlan,
+            ),
+          ],
           const Divider(height: 1),
           ChatInputBar(
             isStreaming: isStreaming,
-            onSend: _sendMessage,
+            onSend: (text) => _sendMessage(text, purpose: _purpose),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CreatePlanBar extends StatelessWidget {
+  const _CreatePlanBar({
+    required this.isCreating,
+    required this.onCreatePlan,
+  });
+
+  final bool isCreating;
+  final VoidCallback onCreatePlan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: isCreating ? null : onCreatePlan,
+          icon: isCreating
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.auto_graph),
+          label: Text(
+            isCreating ? 'Creating Plan…' : 'Create Retirement Plan',
+          ),
+        ),
       ),
     );
   }

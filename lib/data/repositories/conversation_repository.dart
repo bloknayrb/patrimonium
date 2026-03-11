@@ -20,17 +20,30 @@ class ConversationRepository {
   }
 
   /// Create a new conversation and return its ID.
-  Future<String> createConversation(String provider, String model) async {
+  Future<String> createConversation(
+    String provider,
+    String model, {
+    String purpose = 'general',
+  }) async {
     final id = _uuid.v4();
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.into(_db.conversations).insert(ConversationsCompanion(
       id: Value(id),
       provider: Value(provider),
       model: Value(model),
+      purpose: Value(purpose),
       createdAt: Value(now),
       updatedAt: Value(now),
     ));
     return id;
+  }
+
+  /// Get the purpose of a conversation (e.g. 'general', 'retirement').
+  Future<String> getConversationPurpose(String conversationId) async {
+    final conv = await (_db.select(_db.conversations)
+          ..where((c) => c.id.equals(conversationId)))
+        .getSingleOrNull();
+    return conv?.purpose ?? 'general';
   }
 
   /// Update the display title of a conversation.

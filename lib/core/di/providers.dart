@@ -26,6 +26,7 @@ import '../../domain/usecases/ai/budget_suggestion_service.dart';
 import '../../domain/usecases/ai/chat_service.dart';
 import '../../domain/usecases/ai/context_builder.dart';
 import '../../domain/usecases/ai/insight_generation_service.dart';
+import '../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../data/remote/dio_client.dart';
 import '../../data/remote/llm/claude_client.dart';
 import '../../data/remote/llm/gemini_client.dart';
@@ -345,6 +346,13 @@ final budgetSuggestionServiceProvider =
     Provider<BudgetSuggestionService>((ref) {
   return BudgetSuggestionService(
     contextBuilder: ref.watch(contextBuilderProvider),
+  );
+});
+
+final retirementParamsExtractorProvider =
+    Provider<RetirementParamsExtractor>((ref) {
+  return RetirementParamsExtractor(
+    conversationRepo: ref.watch(conversationRepositoryProvider),
   );
 });
 

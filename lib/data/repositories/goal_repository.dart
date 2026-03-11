@@ -36,6 +36,12 @@ class GoalRepository {
         .getSingleOrNull();
   }
 
+  /// Watch a single goal reactively by ID.
+  Stream<Goal?> watchGoalById(String id) {
+    return (_db.select(_db.goals)..where((g) => g.id.equals(id)))
+        .watchSingleOrNull();
+  }
+
   /// Insert a new goal.
   Future<void> insertGoal(GoalsCompanion goal) {
     return _db.into(_db.goals).insert(goal);

@@ -131,6 +131,12 @@ class Goals extends Table {
   IntColumn get color => integer()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   IntColumn get completedAt => integer().nullable()();
+  // Retirement projection fields (nullable — only set for retirement goals)
+  IntColumn get monthlyContributionCents => integer().nullable()();
+  IntColumn get annualReturnBps => integer().nullable()();         // 450 = 4.5% real
+  IntColumn get annualVolatilityBps => integer().nullable()();     // 1500 = 15%
+  IntColumn get retirementYear => integer().nullable()();
+  IntColumn get desiredMonthlyIncomeCents => integer().nullable()(); // for 25x rule
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
@@ -241,6 +247,7 @@ class Conversations extends Table {
   TextColumn get title => text().nullable()();
   TextColumn get provider => text()();
   TextColumn get model => text()();
+  TextColumn get purpose => text().withDefault(const Constant('general'))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
@@ -401,7 +408,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -473,6 +480,28 @@ class AppDatabase extends _$AppDatabase {
             );
             await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_accounts_bank_connection ON accounts (bank_connection_id)',
+            );
+          }
+
+          // v3 → v4: Retirement projection columns on Goals, purpose on Conversations
+          if (from < 4) {
+            await customStatement(
+              'ALTER TABLE goals ADD COLUMN monthly_contribution_cents INTEGER',
+            );
+            await customStatement(
+              'ALTER TABLE goals ADD COLUMN annual_return_bps INTEGER',
+            );
+            await customStatement(
+              'ALTER TABLE goals ADD COLUMN annual_volatility_bps INTEGER',
+            );
+            await customStatement(
+              'ALTER TABLE goals ADD COLUMN retirement_year INTEGER',
+            );
+            await customStatement(
+              'ALTER TABLE goals ADD COLUMN desired_monthly_income_cents INTEGER',
+            );
+            await customStatement(
+              "ALTER TABLE conversations ADD COLUMN purpose TEXT NOT NULL DEFAULT 'general'",
             );
           }
         },
