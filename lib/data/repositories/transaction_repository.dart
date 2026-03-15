@@ -191,14 +191,30 @@ class TransactionRepository {
   /// This catches duplicates across sources (CSV vs SimpleFIN) where external IDs
   /// are incompatible. Payee is excluded because the same merchant appears
   /// differently across sources.
-  Future<bool> existsByFuzzyMatch(String accountId, int dateMs, int amountCents) async {
+  ///
+  /// [excludeExternalIdPrefix] excludes transactions from the same sync source
+  /// (e.g. pass `'$connectionId:'` to skip previously-synced SimpleFIN transactions
+  /// while still matching CSV and manual entries).
+  Future<bool> existsByFuzzyMatch(
+    String accountId,
+    int dateMs,
+    int amountCents, {
+    String? excludeExternalIdPrefix,
+  }) async {
     final windowMs = 86400000 * 3; // ±3 days
     final result = await (_db.select(_db.transactions)
-          ..where((t) =>
-              t.accountId.equals(accountId) &
-              t.amountCents.equals(amountCents) &
-              t.date.isBiggerOrEqualValue(dateMs - windowMs) &
-              t.date.isSmallerOrEqualValue(dateMs + windowMs))
+          ..where((t) {
+            var condition = t.accountId.equals(accountId) &
+                t.amountCents.equals(amountCents) &
+                t.date.isBiggerOrEqualValue(dateMs - windowMs) &
+                t.date.isSmallerOrEqualValue(dateMs + windowMs);
+            if (excludeExternalIdPrefix != null) {
+              condition = condition &
+                  (t.externalId.isNull() |
+                      t.externalId.like('$excludeExternalIdPrefix%').not());
+            }
+            return condition;
+          })
           ..limit(1))
         .get();
     return result.isNotEmpty;

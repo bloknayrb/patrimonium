@@ -224,8 +224,9 @@ class SimplefinSyncService {
         accountsUpdated++;
 
         // Process transactions
+        final externalIdPrefix = '$connectionId:';
         for (final sfTxn in sfAccount.transactions) {
-          final externalId = '$connectionId:${sfTxn.id}';
+          final externalId = '$externalIdPrefix${sfTxn.id}';
 
           // Check for existing transaction
           final existing =
@@ -259,6 +260,7 @@ class SimplefinSyncService {
           // Fuzzy dedup: catch duplicates from other sources (e.g. CSV import)
           final fuzzyMatch = await _transactionRepo.existsByFuzzyMatch(
             localAccount.id, dateMillis, sfTxn.amountCents,
+            excludeExternalIdPrefix: externalIdPrefix,
           );
           if (fuzzyMatch) {
             if (kDebugMode) {
