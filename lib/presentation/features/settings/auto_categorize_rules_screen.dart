@@ -231,17 +231,14 @@ class _RuleDialogState extends ConsumerState<_RuleDialog> {
   }
 
   Future<void> _pickCategory(BuildContext context) async {
-    final categories = await ref.read(allCategoriesProvider.future);
-
-    if (!mounted) return;
-
     final result = await showCategoryPickerSheet(
       context: context,
-      categories: categories,
       selectedCategoryId: _selectedCategoryId,
       showClear: false,
     );
-    if (result != null && !result.cleared && mounted) {
+
+    if (!mounted || result == null) return;
+    if (!result.cleared) {
       setState(() {
         _selectedCategoryId = result.id;
         _selectedCategoryName = result.name;

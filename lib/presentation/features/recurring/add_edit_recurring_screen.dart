@@ -91,13 +91,8 @@ class _AddEditRecurringScreenState
   }
 
   Future<void> _showCategoryPicker() async {
-    final categories = await ref.read(allCategoriesProvider.future);
-
-    if (!mounted) return;
-
     final result = await showCategoryPickerSheet(
       context: context,
-      categories: categories,
       selectedCategoryId: _selectedCategoryId,
     );
 

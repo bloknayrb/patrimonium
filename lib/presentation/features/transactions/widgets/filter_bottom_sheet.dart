@@ -71,15 +71,11 @@ class _FilterBottomSheetState extends ConsumerState<FilterBottomSheet> {
   }
 
   Future<void> _showCategoryPicker() async {
-    final categories = await ref.read(allCategoriesProvider.future);
-
-    if (!mounted) return;
-
     final result = await showCategoryPickerSheet(
       context: context,
-      categories: categories,
       selectedCategoryId: _filters.categoryId,
       title: 'Filter by Category',
+      showAddButton: false,
     );
 
     if (!mounted || result == null) return;

@@ -110,17 +110,9 @@ class _AddEditTransactionScreenState
   }
 
   Future<void> _showCategoryPicker() async {
-    final categories = await ref.read(
-      _isExpense
-          ? expenseCategoriesProvider.future
-          : incomeCategoriesProvider.future,
-    );
-
-    if (!mounted) return;
-
     final result = await showCategoryPickerSheet(
       context: context,
-      categories: categories,
+      categoryType: _isExpense ? 'expense' : 'income',
       selectedCategoryId: _selectedCategoryId,
     );
 
