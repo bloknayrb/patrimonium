@@ -187,4 +187,188 @@ void main() {
       expect(result.containsKey('cat-b'), false);
     });
   });
+
+  group('existsByFuzzyMatch', () {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final baseDate = now - 86400000 * 10; // 10 days ago
+
+    Future<void> insertTxnWithExternalId(
+      String id,
+      String accountId,
+      int amountCents,
+      int date, {
+      String? externalId,
+    }) async {
+      await database.into(database.transactions).insert(
+            TransactionsCompanion.insert(
+              id: id,
+              accountId: accountId,
+              amountCents: amountCents,
+              date: date,
+              payee: 'Test',
+              externalId: Value(externalId),
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    }
+
+    test('matches transaction with same account, amount, and date in window',
+        () async {
+      // Arrange
+      await insertTxnWithExternalId('t1', 'acc-1', -500, baseDate);
+
+      // Act — same amount, 1 day later
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+      );
+
+      // Assert
+      expect(result, true);
+    });
+
+    test('does not match when amount differs', () async {
+      // Arrange
+      await insertTxnWithExternalId('t1', 'acc-1', -500, baseDate);
+
+      // Act
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -600,
+      );
+
+      // Assert
+      expect(result, false);
+    });
+
+    test('does not match when date is outside ±3 day window', () async {
+      // Arrange
+      await insertTxnWithExternalId('t1', 'acc-1', -500, baseDate);
+
+      // Act — 4 days later (outside window)
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000 * 4,
+        -500,
+      );
+
+      // Assert
+      expect(result, false);
+    });
+
+    test('excludes same-source SimpleFIN transactions when prefix provided',
+        () async {
+      // Arrange — existing SimpleFIN transaction from connection "conn-1"
+      await insertTxnWithExternalId(
+        't1',
+        'acc-1',
+        -500,
+        baseDate,
+        externalId: 'conn-1:txn-abc',
+      );
+
+      // Act — new SimpleFIN transaction with same amount, 1 day later
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+        excludeExternalIdPrefix: 'conn-1:',
+      );
+
+      // Assert — should NOT match (same source excluded)
+      expect(result, false);
+    });
+
+    test('still matches CSV transactions when SimpleFIN prefix excluded',
+        () async {
+      // Arrange — existing CSV-imported transaction
+      await insertTxnWithExternalId(
+        't1',
+        'acc-1',
+        -500,
+        baseDate,
+        externalId: 'csv_abcdef1234567890',
+      );
+
+      // Act — SimpleFIN sync with same amount
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+        excludeExternalIdPrefix: 'conn-1:',
+      );
+
+      // Assert — should match (CSV is a different source)
+      expect(result, true);
+    });
+
+    test('still matches manual transactions when SimpleFIN prefix excluded',
+        () async {
+      // Arrange — manual transaction (no externalId)
+      await insertTxnWithExternalId(
+        't1',
+        'acc-1',
+        -500,
+        baseDate,
+      );
+
+      // Act — SimpleFIN sync with same amount
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+        excludeExternalIdPrefix: 'conn-1:',
+      );
+
+      // Assert — should match (manual entries always included)
+      expect(result, true);
+    });
+
+    test('matches SimpleFIN transactions from different connection', () async {
+      // Arrange — existing SimpleFIN transaction from connection "conn-2"
+      await insertTxnWithExternalId(
+        't1',
+        'acc-1',
+        -500,
+        baseDate,
+        externalId: 'conn-2:txn-xyz',
+      );
+
+      // Act — SimpleFIN sync from connection "conn-1"
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+        excludeExternalIdPrefix: 'conn-1:',
+      );
+
+      // Assert — should match (different connection, not excluded)
+      expect(result, true);
+    });
+
+    test('without prefix, matches all transactions including SimpleFIN',
+        () async {
+      // Arrange — existing SimpleFIN transaction
+      await insertTxnWithExternalId(
+        't1',
+        'acc-1',
+        -500,
+        baseDate,
+        externalId: 'conn-1:txn-abc',
+      );
+
+      // Act — no prefix exclusion (e.g. called from CSV import)
+      final result = await repo.existsByFuzzyMatch(
+        'acc-1',
+        baseDate + 86400000,
+        -500,
+      );
+
+      // Assert — should match (no exclusion applied)
+      expect(result, true);
+    });
+  });
 }
