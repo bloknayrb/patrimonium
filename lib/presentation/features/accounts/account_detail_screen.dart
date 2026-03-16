@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../shared/loading/shimmer_loading.dart';
 import '../transactions/transactions_providers.dart';
 import 'accounts_providers.dart';

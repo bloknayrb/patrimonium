@@ -5,11 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/router/app_router.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../domain/usecases/sync/simplefin_sync_service.dart';
-import '../budgets/budgets_providers.dart';
-import '../dashboard/dashboard_providers.dart';
-import '../transactions/transactions_providers.dart';
+import '../../shared/utils/provider_invalidation.dart';
 import 'bank_connections_providers.dart';
 import 'widgets/sync_history_card.dart';
 
@@ -162,13 +160,7 @@ class ConnectionDetailScreen extends ConsumerWidget {
   Future<void> _sync(BuildContext context, WidgetRef ref) async {
     final result = await ref.read(simplefinSyncServiceProvider).syncConnection(connectionId);
     // Refresh cached FutureProviders after sync
-    ref.invalidate(monthlyIncomeProvider);
-    ref.invalidate(monthlyExpensesProvider);
-    ref.invalidate(spendingByCategoryProvider);
-    ref.invalidate(monthlySpendingHistoryProvider);
-    ref.invalidate(netWorthHistoryProvider);
-    ref.invalidate(uncategorizedCountProvider);
-    ref.invalidate(budgetsWithSpentProvider);
+    invalidateFinancialData(ref);
     if (context.mounted) {
       final String msg;
       if (result.rateLimited) {

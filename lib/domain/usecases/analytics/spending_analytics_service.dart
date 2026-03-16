@@ -1,0 +1,116 @@
+import '../../../core/extensions/money_extensions.dart';
+import '../../../data/repositories/account_repository.dart';
+import '../../../data/repositories/category_repository.dart';
+import '../../../data/repositories/transaction_repository.dart';
+import 'analytics_models.dart';
+
+export 'analytics_models.dart';
+
+/// Domain service for dashboard analytics computations.
+class SpendingAnalyticsService {
+  SpendingAnalyticsService({
+    required TransactionRepository transactionRepo,
+    required CategoryRepository categoryRepo,
+    required AccountRepository accountRepo,
+  })  : _transactionRepo = transactionRepo,
+        _categoryRepo = categoryRepo,
+        _accountRepo = accountRepo;
+
+  final TransactionRepository _transactionRepo;
+  final CategoryRepository _categoryRepo;
+  final AccountRepository _accountRepo;
+
+  /// Top spending categories for the current month, merged by parent.
+  Future<List<CategorySpending>> getTopCategorySpending(int topN) async {
+    final now = DateTime.now();
+    final monthStart = now.startOfMonth.millisecondsSinceEpoch;
+    final monthEnd = now.endOfMonth.millisecondsSinceEpoch;
+
+    final transactions = await _transactionRepo.getTransactionsByDateRange(
+      monthStart,
+      monthEnd,
+    );
+    final categories = await _categoryRepo.getAllCategories();
+    final categoryMap = {for (final c in categories) c.id: c};
+
+    // Group expenses by categoryId.
+    final totals = <String, int>{};
+    for (final t in transactions) {
+      if (t.amountCents >= 0 || t.categoryId == null) continue;
+      totals[t.categoryId!] = (totals[t.categoryId!] ?? 0) + t.amountCents.abs();
+    }
+
+    // Resolve to parent categories for grouping.
+    final results = totals.entries.map((e) {
+      final cat = categoryMap[e.key];
+      final parentCat = cat?.parentId != null ? categoryMap[cat!.parentId] : null;
+      final displayCat = parentCat ?? cat;
+      return (
+        categoryId: displayCat?.id ?? e.key,
+        categoryName: displayCat?.name ?? 'Uncategorized',
+        color: displayCat?.color ?? 0xFF9E9E9E,
+        amountCents: e.value,
+      );
+    }).toList();
+
+    // Merge by parent category.
+    final merged = <String, CategorySpending>{};
+    for (final r in results) {
+      final existing = merged[r.categoryId];
+      if (existing != null) {
+        merged[r.categoryId] = CategorySpending(
+          categoryId: r.categoryId,
+          categoryName: r.categoryName,
+          color: r.color,
+          amountCents: existing.amountCents + r.amountCents,
+        );
+      } else {
+        merged[r.categoryId] = CategorySpending(
+          categoryId: r.categoryId,
+          categoryName: r.categoryName,
+          color: r.color,
+          amountCents: r.amountCents,
+        );
+      }
+    }
+
+    final sorted = merged.values.toList()
+      ..sort((a, b) => b.amountCents.compareTo(a.amountCents));
+    return sorted.take(topN).toList();
+  }
+
+  /// Net worth at each month-end for the last [months] months,
+  /// reconstructed by subtracting future transactions from current balances.
+  Future<List<NetWorthSnapshot>> getNetWorthHistory(int months) async {
+    final accounts = await _accountRepo.getAllAccounts();
+    final now = DateTime.now();
+
+    final currentBalances = <String, int>{};
+    for (final a in accounts) {
+      currentBalances[a.id] = a.balanceCents;
+    }
+
+    // Build month-end dates and fetch all sums concurrently.
+    final monthEnds = List.generate(months, (i) {
+      return DateTime(now.year, now.month - i + 1, 0, 23, 59, 59, 999);
+    });
+
+    final allSums = await Future.wait(
+      monthEnds.map((me) =>
+          _transactionRepo.getTransactionSumsAfterDate(me.millisecondsSinceEpoch)),
+    );
+
+    final snapshots = <NetWorthSnapshot>[];
+    for (var i = 0; i < monthEnds.length; i++) {
+      final sumsAfter = allSums[i];
+      var netWorth = 0;
+      for (final a in accounts) {
+        final afterMonthEnd = sumsAfter[a.id] ?? 0;
+        netWorth += currentBalances[a.id]! - afterMonthEnd;
+      }
+      snapshots.add(NetWorthSnapshot(month: monthEnds[i], netWorthCents: netWorth));
+    }
+
+    return snapshots.reversed.toList();
+  }
+}

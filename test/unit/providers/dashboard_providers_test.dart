@@ -167,7 +167,8 @@ void main() {
         _fakeAccount(id: 'acc-1', balanceCents: 100000, isAsset: true),
       ];
 
-      // getTransactionSumsAfterDate returns empty map (no transactions)
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => accounts);
       when(() => mockTxnRepo.getTransactionSumsAfterDate(any()))
           .thenAnswer((_) async => <String, int>{});
 
@@ -189,7 +190,8 @@ void main() {
         _fakeAccount(id: 'acc-1', balanceCents: 100000, isAsset: true),
       ];
 
-      // For the most recent month-end, 20000 cents of transactions happened after
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => accounts);
       when(() => mockTxnRepo.getTransactionSumsAfterDate(any()))
           .thenAnswer((_) async => {'acc-1': 20000});
 
@@ -209,6 +211,8 @@ void main() {
         _fakeAccount(id: 'acc-1', balanceCents: 50000),
       ];
 
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => accounts);
       when(() => mockTxnRepo.getTransactionSumsAfterDate(any()))
           .thenAnswer((_) async => <String, int>{});
 
@@ -224,6 +228,8 @@ void main() {
     });
 
     test('handles empty account list', () async {
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => []);
       when(() => mockTxnRepo.getTransactionSumsAfterDate(any()))
           .thenAnswer((_) async => <String, int>{});
 

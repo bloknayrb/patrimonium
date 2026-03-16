@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../domain/usecases/sync/simplefin_sync_service.dart';
 
 /// Watch all bank connections.

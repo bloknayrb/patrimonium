@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/extensions/money_extensions.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../data/local/database/app_database.dart';
+import '../../../../data/local/database/models.dart';
 import '../../../../domain/usecases/sync/simplefin_sync_service.dart';
 
 /// Card widget displaying a single bank connection's status.

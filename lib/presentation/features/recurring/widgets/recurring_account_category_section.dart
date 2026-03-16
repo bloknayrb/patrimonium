@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../data/local/database/app_database.dart';
+import '../../../../data/local/database/models.dart';
 
 /// Account dropdown and category picker for recurring transaction forms.
 class RecurringAccountCategorySection extends StatelessWidget {

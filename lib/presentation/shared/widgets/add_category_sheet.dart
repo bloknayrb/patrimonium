@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../../core/constants/category_icons.dart';
 import '../../../core/di/providers.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import 'category_picker_sheet.dart';
 
 /// Shows a bottom sheet to create a new category.

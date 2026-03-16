@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../domain/usecases/sync/simplefin_sync_service.dart';
-import '../budgets/budgets_providers.dart';
-import '../transactions/transactions_providers.dart';
+import '../../shared/utils/provider_invalidation.dart';
 import 'dashboard_providers.dart';
 import 'widgets/net_worth_card.dart';
 import 'widgets/cash_flow_card.dart';
@@ -93,53 +92,33 @@ class DashboardScreen extends ConsumerWidget {
     }
 
     ref.read(_dashboardSyncingProvider.notifier).state = true;
-    final syncService = ref.read(simplefinSyncServiceProvider);
 
-    var totalAccounts = 0;
-    var totalTransactions = 0;
-    var totalApiReceived = 0;
-    String? firstError;
+    final summary =
+        await ref.read(syncOrchestratorProvider).syncAllConnected(connected);
 
-    try {
-      for (final conn in connected) {
-        final result = await syncService.syncConnection(conn.id);
-        totalAccounts += result.accountsUpdated;
-        totalTransactions += result.transactionsImported;
-        totalApiReceived += result.apiTransactionsReceived;
-        if (result.errorMessage != null && firstError == null) {
-          firstError = result.errorMessage;
-        }
-      }
-    } catch (e) {
-      firstError = e.toString();
-    } finally {
-      ref.read(_dashboardSyncingProvider.notifier).state = false;
-      // Refresh cached FutureProviders after sync
-      ref.invalidate(monthlyIncomeProvider);
-      ref.invalidate(monthlyExpensesProvider);
-      ref.invalidate(spendingByCategoryProvider);
-      ref.invalidate(monthlySpendingHistoryProvider);
-      ref.invalidate(netWorthHistoryProvider);
-      ref.invalidate(uncategorizedCountProvider);
-      ref.invalidate(budgetsWithSpentProvider);
-    }
+    ref.read(_dashboardSyncingProvider.notifier).state = false;
+    invalidateFinancialData(ref);
 
     if (!context.mounted) return;
 
-    if (firstError != null && totalTransactions == 0 && totalAccounts == 0) {
+    if (summary.firstError != null &&
+        summary.transactionsImported == 0 &&
+        summary.accountsUpdated == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sync error: $firstError')),
+        SnackBar(content: Text('Sync error: ${summary.firstError}')),
       );
     } else {
-      final detail = totalTransactions > 0
-          ? '$totalTransactions new transactions'
-          : totalApiReceived > 0
-              ? '0 new ($totalApiReceived checked)'
+      final detail = summary.transactionsImported > 0
+          ? '${summary.transactionsImported} new transactions'
+          : summary.apiTransactionsReceived > 0
+              ? '0 new (${summary.apiTransactionsReceived} checked)'
               : '0 new (0 from bank)';
-      final warning = firstError != null ? ' — $firstError' : '';
+      final warning =
+          summary.firstError != null ? ' — ${summary.firstError}' : '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Synced $totalAccounts accounts, $detail$warning'),
+          content: Text(
+              'Synced ${summary.accountsUpdated} accounts, $detail$warning'),
         ),
       );
     }

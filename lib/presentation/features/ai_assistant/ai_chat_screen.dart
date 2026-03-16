@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/router/app_router.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../domain/usecases/retirement/retirement_params_extractor.dart';
 import '../../../domain/usecases/retirement/retirement_prompts.dart';
 import '../../shared/utils/snackbar_helpers.dart';

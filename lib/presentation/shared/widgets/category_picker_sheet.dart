@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/category_icons.dart';
 import '../../../core/di/providers.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import 'add_category_sheet.dart';
 
 /// Result returned from the category picker bottom sheet.

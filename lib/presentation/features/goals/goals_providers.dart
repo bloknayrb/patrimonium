@@ -3,7 +3,7 @@ import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../domain/usecases/retirement/monte_carlo_service.dart';
 
 /// Watch active (incomplete) goals ordered by target date.

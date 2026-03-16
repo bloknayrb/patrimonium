@@ -10,7 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../shared/utils/snackbar_helpers.dart';
 import '../../shared/widgets/category_picker_sheet.dart';
 import '../../shared/widgets/delete_confirmation_dialog.dart';

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/account_types.dart';
 import '../../../../core/extensions/money_extensions.dart';
-import '../../../../data/local/database/app_database.dart';
+import '../../../../data/local/database/models.dart';
 import '../../../../data/remote/simplefin/simplefin_models.dart';
 
 enum LinkAction { createNew, linkExisting, skip }

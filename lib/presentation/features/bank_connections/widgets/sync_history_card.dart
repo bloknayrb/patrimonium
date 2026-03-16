@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/extensions/money_extensions.dart';
-import '../../../../data/local/database/app_database.dart';
+import '../../../../data/local/database/models.dart';
 
 /// Widget displaying a single sync history entry.
 class SyncHistoryCard extends StatelessWidget {

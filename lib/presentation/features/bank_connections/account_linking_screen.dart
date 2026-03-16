@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/account_types.dart';
 import '../../../core/di/providers.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../data/remote/simplefin/simplefin_models.dart';
 import 'bank_connections_providers.dart';
 import 'widgets/account_link_card.dart';

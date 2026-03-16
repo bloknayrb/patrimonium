@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/extensions/money_extensions.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../shared/loading/shimmer_loading.dart';
 import 'edit_retirement_params_screen.dart';
 import 'goals_providers.dart';

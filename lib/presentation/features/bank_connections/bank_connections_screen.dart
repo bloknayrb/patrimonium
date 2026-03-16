@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../data/local/database/app_database.dart';
+import '../../../data/local/database/models.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../domain/usecases/sync/simplefin_sync_service.dart';
+import '../../shared/utils/provider_invalidation.dart';
 import 'bank_connections_providers.dart';
 import 'widgets/connection_card.dart';
 
@@ -81,6 +82,7 @@ class BankConnectionsScreen extends ConsumerWidget {
       if (connection.status == ConnectionStatus.disconnected) continue;
       await syncService.syncConnection(connection.id);
     }
+    invalidateFinancialData(ref);
   }
 }
 
@@ -135,6 +137,7 @@ class _ConnectionItem extends ConsumerWidget {
       }
     } finally {
       ref.read(syncInProgressProvider(connectionId).notifier).state = false;
+      invalidateFinancialData(ref);
     }
   }
 }

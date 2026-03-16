@@ -307,6 +307,7 @@ Material 3 with `dynamic_color` support. Custom `FinanceColors` theme extension 
 - **Account types**: 18 types defined in `core/constants/account_types.dart` with `AccountTypeInfo` metadata and `accountTypeGroups` for UI grouping (re-exported from `accounts_providers.dart`). Types: checking, savings, credit_card, brokerage, 401k, IRA, roth_ira, HSA, mortgage, auto_loan, student_loan, personal_loan, line_of_credit, real_estate, vehicle, crypto, other_asset, other_liability.
 - **Expenses stored as negative cents**: Income is positive, expenses are negative in `amountCents`.
 - **autoDispose providers**: All feature-level StreamProviders and FutureProviders use `.autoDispose` for memory efficiency. Core infrastructure providers (database, repositories) do not.
+- **Linux secure storage**: `flutter_secure_storage` on Linux requires `libsecret` / `gnome-keyring` (D-Bus secret service). A `PlatformException` from missing libsecret would crash sync without a user-friendly error.
 - **No CI/CD**: No GitHub Actions or CI pipeline is configured yet.
 
 ## Key Dependencies
@@ -534,4 +535,5 @@ import 'package:patrimonium/data/repositories/account_repository.dart';
 - **Phase 2 (Accounts & Transactions)**: Complete — accounts CRUD (18 types), transactions CRUD with filtering/search, category hierarchy with seeding, dashboard (net worth, cash flow, budget health, recent transactions, AI insights cards), onboarding flow, CSV export, account detail with transaction history
 - **Phase 3 (Bank Connectivity & Data Import)**: In progress
   - **Complete**: SimpleFIN client + sync service, bank connections UI (setup, linking, detail), CSV import with column mapping and preview, recurring transaction detection, budget management screens, goal tracking screens, background sync manager scaffolding, investment holdings sync via SimpleFIN, auto-categorization backend (two-tier pipeline, 300 default merchant rules, learning from manual assignments, bulk categorize existing transactions), AI/LLM assistant (4 providers: Gemini/Claude/OpenAI/Ollama, chat UI, dashboard insights), adaptive app icon, code review fixes (lock screen bypass, dark theme copy-paste, O(N²) list builds, sync token safety)
+  - **Note**: Linux background sync is in-process only (Timer.periodic while app is open) vs Android WorkManager. Disabling/re-enabling background sync requires app restart.
   - **Remaining**: Auto-categorization rules management UI, Supabase sync, OFX import

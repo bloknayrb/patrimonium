@@ -20,6 +20,8 @@ import '../../domain/usecases/auth/pin_service.dart';
 import '../../domain/usecases/categories/category_seeder.dart';
 import '../../domain/usecases/export/csv_export_service.dart';
 import '../../domain/usecases/import/csv_import_service.dart';
+import '../../domain/usecases/analytics/spending_analytics_service.dart';
+import '../../domain/usecases/budgets/budget_spending_service.dart';
 import '../../domain/usecases/categorize/auto_categorize_service.dart';
 import '../../domain/usecases/categorize/rules_import_service.dart';
 import '../../domain/usecases/recurring/recurring_detection_service.dart';
@@ -40,6 +42,7 @@ import '../../data/repositories/insight_repository.dart';
 import '../../data/repositories/bank_connection_repository.dart';
 import '../../domain/usecases/sync/background_sync_manager.dart';
 import '../../domain/usecases/sync/simplefin_sync_service.dart';
+import '../../domain/usecases/sync/sync_orchestrator.dart';
 import '../router/app_router.dart';
 
 // =============================================================================
@@ -109,6 +112,22 @@ final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
   return BudgetRepository(ref.watch(databaseProvider));
 });
 
+final spendingAnalyticsServiceProvider =
+    Provider<SpendingAnalyticsService>((ref) {
+  return SpendingAnalyticsService(
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    categoryRepo: ref.watch(categoryRepositoryProvider),
+    accountRepo: ref.watch(accountRepositoryProvider),
+  );
+});
+
+final budgetSpendingServiceProvider = Provider<BudgetSpendingService>((ref) {
+  return BudgetSpendingService(
+    transactionRepo: ref.watch(transactionRepositoryProvider),
+    categoryRepo: ref.watch(categoryRepositoryProvider),
+  );
+});
+
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   return GoalRepository(ref.watch(databaseProvider));
 });
@@ -160,6 +179,10 @@ final simplefinSyncServiceProvider = Provider<SimplefinSyncService>((ref) {
     importRepo: ref.watch(importRepositoryProvider),
     autoCategorizeService: ref.watch(autoCategorizeServiceProvider),
   );
+});
+
+final syncOrchestratorProvider = Provider<SyncOrchestrator>((ref) {
+  return SyncOrchestrator(ref.watch(simplefinSyncServiceProvider));
 });
 
 final backgroundSyncManagerProvider = Provider<BackgroundSyncManager>((ref) {
