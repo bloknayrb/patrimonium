@@ -124,6 +124,7 @@ void main() {
     String id = accountId,
     String? bankConnectionId = connectionId,
     String? externalId = 'sf-acc-1',
+    bool invertSign = false,
   }) {
     return Account(
       id: id,
@@ -133,6 +134,7 @@ void main() {
       currencyCode: 'USD',
       isAsset: true,
       isHidden: false,
+      invertSign: invertSign,
       displayOrder: 0,
       bankConnectionId: bankConnectionId,
       externalId: externalId,
@@ -798,6 +800,236 @@ void main() {
       expect(result.apiTransactionsReceived, 3);
       expect(result.transactionsImported, 0);
       expect(result.transactionsSkipped, 3);
+    });
+
+    test('negates transaction amounts when account has invertSign=true',
+        () async {
+      stubBasicSuccessfulSync();
+      final localAccount = makeAccount(invertSign: true);
+      when(() => mockAccountRepo.getAccountsByConnection(connectionId))
+          .thenAnswer((_) async => [localAccount]);
+      when(() => mockAccountRepo.updateBalance(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockAccountRepo.updateLastSyncedAt(any()))
+          .thenAnswer((_) async {});
+      when(() => mockTxnRepo.existsByFuzzyMatch(any(), any(), any(),
+            excludeExternalIdPrefix: any(named: 'excludeExternalIdPrefix')))
+          .thenAnswer((_) async => false);
+      when(() => mockTxnRepo.insertTransaction(any()))
+          .thenAnswer((_) async {});
+      when(() => mockAutoCatService.categorizeWithPreloadedRules(
+            any(), any(),
+            amountCents: any(named: 'amountCents'),
+            accountId: any(named: 'accountId'),
+          )).thenAnswer((_) async => null);
+
+      when(() => mockClient.getAccounts(any(),
+              includePending: any(named: 'includePending')))
+          .thenAnswer((_) async => const SimplefinAccountsResponse(
+                accounts: [
+                  SimplefinAccount(
+                    id: 'sf-acc-1',
+                    name: 'Checking',
+                    currency: 'USD',
+                    balanceCents: 100000,
+                    balanceDateUnix: 1700000000,
+                    transactions: [
+                      SimplefinTransaction(
+                        id: 'sf-txn-1',
+                        postedUnix: 1700000000,
+                        amountCents: 500, // positive from bank
+                        description: 'STARBUCKS',
+                      ),
+                    ],
+                  ),
+                ],
+              ));
+
+      await service.syncConnection(connectionId);
+
+      // Verify the inserted transaction has negated amount
+      final captured =
+          verify(() => mockTxnRepo.insertTransaction(captureAny()))
+              .captured
+              .first as TransactionsCompanion;
+      expect(captured.amountCents.value, -500);
+    });
+
+    test('invertSign negates amount in fuzzy dedup check', () async {
+      stubBasicSuccessfulSync();
+      final localAccount = makeAccount(invertSign: true);
+      when(() => mockAccountRepo.getAccountsByConnection(connectionId))
+          .thenAnswer((_) async => [localAccount]);
+      when(() => mockAccountRepo.updateBalance(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockAccountRepo.updateLastSyncedAt(any()))
+          .thenAnswer((_) async {});
+      when(() => mockTxnRepo.existsByFuzzyMatch(any(), any(), any(),
+            excludeExternalIdPrefix: any(named: 'excludeExternalIdPrefix')))
+          .thenAnswer((_) async => true);
+
+      when(() => mockClient.getAccounts(any(),
+              includePending: any(named: 'includePending')))
+          .thenAnswer((_) async => const SimplefinAccountsResponse(
+                accounts: [
+                  SimplefinAccount(
+                    id: 'sf-acc-1',
+                    name: 'Checking',
+                    currency: 'USD',
+                    balanceCents: 100000,
+                    balanceDateUnix: 1700000000,
+                    transactions: [
+                      SimplefinTransaction(
+                        id: 'sf-txn-1',
+                        postedUnix: 1700000000,
+                        amountCents: 500,
+                        description: 'STARBUCKS',
+                      ),
+                    ],
+                  ),
+                ],
+              ));
+
+      await service.syncConnection(connectionId);
+
+      // Verify fuzzy dedup was called with negated amount
+      verify(() => mockTxnRepo.existsByFuzzyMatch(
+            accountId,
+            any(),
+            -500, // negated
+            excludeExternalIdPrefix: any(named: 'excludeExternalIdPrefix'),
+          )).called(1);
+    });
+
+    test('invertSign negates amount in pending transaction update', () async {
+      stubBasicSuccessfulSync();
+      final localAccount = makeAccount(invertSign: true);
+      when(() => mockAccountRepo.getAccountsByConnection(connectionId))
+          .thenAnswer((_) async => [localAccount]);
+      when(() => mockAccountRepo.updateBalance(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockAccountRepo.updateLastSyncedAt(any()))
+          .thenAnswer((_) async {});
+
+      final pendingTxn = makeTransaction(id: 'existing-1', isPending: true);
+      when(() => mockTxnRepo.getExternalIdsByPrefix(any(), any()))
+          .thenAnswer((_) async => {'$connectionId:sf-txn-1'});
+      when(() => mockTxnRepo.getPendingByPrefix(any(), any())).thenAnswer(
+          (_) async => {'$connectionId:sf-txn-1': pendingTxn});
+      when(() => mockTxnRepo.updateTransaction(any()))
+          .thenAnswer((_) async => true);
+
+      when(() => mockClient.getAccounts(any(),
+              includePending: any(named: 'includePending')))
+          .thenAnswer((_) async => const SimplefinAccountsResponse(
+                accounts: [
+                  SimplefinAccount(
+                    id: 'sf-acc-1',
+                    name: 'Checking',
+                    currency: 'USD',
+                    balanceCents: 100000,
+                    balanceDateUnix: 1700000000,
+                    transactions: [
+                      SimplefinTransaction(
+                        id: 'sf-txn-1',
+                        postedUnix: 1700000000,
+                        amountCents: 550,
+                        description: 'STARBUCKS UPDATED',
+                        isPending: false,
+                      ),
+                    ],
+                  ),
+                ],
+              ));
+
+      await service.syncConnection(connectionId);
+
+      final captured =
+          verify(() => mockTxnRepo.updateTransaction(captureAny()))
+              .captured
+              .first as TransactionsCompanion;
+      expect(captured.amountCents.value, -550);
+    });
+
+    test('invertSign negates amount passed to auto-categorize', () async {
+      stubBasicSuccessfulSync();
+      final localAccount = makeAccount(invertSign: true);
+      when(() => mockAccountRepo.getAccountsByConnection(connectionId))
+          .thenAnswer((_) async => [localAccount]);
+      when(() => mockAccountRepo.updateBalance(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockAccountRepo.updateLastSyncedAt(any()))
+          .thenAnswer((_) async {});
+      when(() => mockTxnRepo.existsByFuzzyMatch(any(), any(), any(),
+            excludeExternalIdPrefix: any(named: 'excludeExternalIdPrefix')))
+          .thenAnswer((_) async => false);
+      when(() => mockTxnRepo.insertTransaction(any()))
+          .thenAnswer((_) async {});
+      when(() => mockAutoCatService.categorizeWithPreloadedRules(
+            any(), any(),
+            amountCents: any(named: 'amountCents'),
+            accountId: any(named: 'accountId'),
+          )).thenAnswer((_) async => null);
+
+      when(() => mockClient.getAccounts(any(),
+              includePending: any(named: 'includePending')))
+          .thenAnswer((_) async => const SimplefinAccountsResponse(
+                accounts: [
+                  SimplefinAccount(
+                    id: 'sf-acc-1',
+                    name: 'Checking',
+                    currency: 'USD',
+                    balanceCents: 100000,
+                    balanceDateUnix: 1700000000,
+                    transactions: [
+                      SimplefinTransaction(
+                        id: 'sf-txn-1',
+                        postedUnix: 1700000000,
+                        amountCents: 500,
+                        description: 'STARBUCKS',
+                      ),
+                    ],
+                  ),
+                ],
+              ));
+
+      await service.syncConnection(connectionId);
+
+      verify(() => mockAutoCatService.categorizeWithPreloadedRules(
+            any(), any(),
+            amountCents: -500, // negated
+            accountId: accountId,
+          )).called(1);
+    });
+
+    test('does not invert balance when invertSign=true', () async {
+      stubBasicSuccessfulSync();
+      final localAccount = makeAccount(invertSign: true);
+      when(() => mockAccountRepo.getAccountsByConnection(connectionId))
+          .thenAnswer((_) async => [localAccount]);
+      when(() => mockAccountRepo.updateBalance(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => mockAccountRepo.updateLastSyncedAt(any()))
+          .thenAnswer((_) async {});
+
+      when(() => mockClient.getAccounts(any(),
+              includePending: any(named: 'includePending')))
+          .thenAnswer((_) async => const SimplefinAccountsResponse(
+                accounts: [
+                  SimplefinAccount(
+                    id: 'sf-acc-1',
+                    name: 'Checking',
+                    currency: 'USD',
+                    balanceCents: 250000,
+                    balanceDateUnix: 1700000000,
+                  ),
+                ],
+              ));
+
+      await service.syncConnection(connectionId);
+
+      // Balance should NOT be inverted
+      verify(() => mockAccountRepo.updateBalance(accountId, 250000)).called(1);
     });
   });
 

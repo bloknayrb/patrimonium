@@ -20,6 +20,7 @@ void main() {
       currencyCode: 'USD',
       isAsset: isAsset,
       isHidden: false,
+      invertSign: false,
       displayOrder: 0,
       createdAt: 0,
       updatedAt: 0,

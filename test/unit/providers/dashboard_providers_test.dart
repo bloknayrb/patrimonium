@@ -40,6 +40,7 @@ Account _fakeAccount({
     currencyCode: 'USD',
     isAsset: isAsset,
     isHidden: false,
+    invertSign: false,
     displayOrder: 0,
     color: null,
     icon: null,

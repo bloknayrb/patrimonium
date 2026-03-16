@@ -225,6 +225,10 @@ class SimplefinSyncService {
           continue;
         }
 
+        // Helper to invert transaction signs when account has invertSign enabled
+        final invert = localAccount.invertSign;
+        int effectiveAmount(int amount) => invert ? -amount : amount;
+
         // Update balance
         await _accountRepo.updateBalance(
           localAccount.id,
@@ -254,7 +258,7 @@ class SimplefinSyncService {
               await _transactionRepo.updateTransaction(
                 TransactionsCompanion(
                   id: Value(pendingTxn.id),
-                  amountCents: Value(sfTxn.amountCents),
+                  amountCents: Value(effectiveAmount(sfTxn.amountCents)),
                   date: Value(dateUnixExisting * 1000),
                   payee: Value(sfTxn.description),
                   isPending: const Value(false),
@@ -272,7 +276,7 @@ class SimplefinSyncService {
 
           // Fuzzy dedup: catch duplicates from other sources (e.g. CSV import)
           final fuzzyMatch = await _transactionRepo.existsByFuzzyMatch(
-            localAccount.id, dateMillis, sfTxn.amountCents,
+            localAccount.id, dateMillis, effectiveAmount(sfTxn.amountCents),
             excludeExternalIdPrefix: externalIdPrefix,
           );
           if (fuzzyMatch) {
@@ -295,7 +299,7 @@ class SimplefinSyncService {
             TransactionsCompanion.insert(
               id: txnId,
               accountId: localAccount.id,
-              amountCents: sfTxn.amountCents,
+              amountCents: effectiveAmount(sfTxn.amountCents),
               date: dateMillis,
               payee: sfTxn.description,
               externalId: Value(externalId),
@@ -310,7 +314,7 @@ class SimplefinSyncService {
               await _autoCategorizeService.categorizeWithPreloadedRules(
             sfTxn.description,
             rules,
-            amountCents: sfTxn.amountCents,
+            amountCents: effectiveAmount(sfTxn.amountCents),
             accountId: localAccount.id,
           );
           if (categoryId != null) {

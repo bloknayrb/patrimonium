@@ -30,6 +30,7 @@ class Accounts extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  BoolColumn get invertSign => boolean().withDefault(const Constant(false))();
   IntColumn get syncStatus => integer().withDefault(const Constant(0))();
 
   @override
@@ -408,7 +409,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -502,6 +503,13 @@ class AppDatabase extends _$AppDatabase {
             );
             await customStatement(
               "ALTER TABLE conversations ADD COLUMN purpose TEXT NOT NULL DEFAULT 'general'",
+            );
+          }
+
+          // v4 → v5: Add invertSign column to Accounts
+          if (from < 5) {
+            await customStatement(
+              'ALTER TABLE accounts ADD COLUMN invert_sign INTEGER NOT NULL DEFAULT 0',
             );
           }
         },
