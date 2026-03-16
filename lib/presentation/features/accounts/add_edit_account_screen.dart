@@ -30,6 +30,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   final _balanceController = TextEditingController();
 
   String _selectedType = 'checking';
+  bool _invertSign = false;
   bool _isSaving = false;
 
   bool get _isEditing => widget.account != null;
@@ -42,6 +43,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       _nameController.text = a.name;
       _institutionController.text = a.institutionName ?? '';
       _selectedType = a.accountType;
+      _invertSign = a.invertSign;
       _balanceController.text = a.balanceCents.toCurrencyValue();
     }
   }
@@ -75,6 +77,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           accountType: Value(_selectedType),
           balanceCents: Value(balanceCents),
           isAsset: Value(isAsset),
+          invertSign: Value(_invertSign),
           updatedAt: Value(now),
         ));
       } else {
@@ -87,6 +90,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           accountType: _selectedType,
           balanceCents: balanceCents,
           isAsset: isAsset,
+          invertSign: Value(_invertSign),
           displayOrder: 0,
           createdAt: now,
           updatedAt: now,
@@ -233,6 +237,19 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Invert sign toggle
+            SwitchListTile(
+              title: const Text('Invert Transaction Signs'),
+              subtitle: const Text(
+                'Enable if this account reports spending as positive and income as negative',
+              ),
+              value: _invertSign,
+              onChanged: _isSaving
+                  ? null
+                  : (v) => setState(() => _invertSign = v),
             ),
             const SizedBox(height: 32),
 

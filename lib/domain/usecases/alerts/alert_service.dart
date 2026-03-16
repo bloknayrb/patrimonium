@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/extensions/money_extensions.dart';
 import '../../../data/local/database/app_database.dart';
+import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/budget_repository.dart';
 import '../../../data/repositories/category_repository.dart';
 import '../../../data/repositories/insight_repository.dart';
@@ -22,12 +23,14 @@ class AlertService {
     required RecurringTransactionRepository recurringRepo,
     required TransactionRepository transactionRepo,
     required CategoryRepository categoryRepo,
+    required AccountRepository accountRepo,
   })  : _insightRepo = insightRepo,
         _budgetRepo = budgetRepo,
         _budgetSpendingService = budgetSpendingService,
         _recurringRepo = recurringRepo,
         _transactionRepo = transactionRepo,
-        _categoryRepo = categoryRepo;
+        _categoryRepo = categoryRepo,
+        _accountRepo = accountRepo;
 
   final InsightRepository _insightRepo;
   final BudgetRepository _budgetRepo;
@@ -35,6 +38,7 @@ class AlertService {
   final RecurringTransactionRepository _recurringRepo;
   final TransactionRepository _transactionRepo;
   final CategoryRepository _categoryRepo;
+  final AccountRepository _accountRepo;
 
   /// Run all alert checks. Returns total alerts generated.
   Future<int> runAllChecks() async {
@@ -53,6 +57,11 @@ class AlertService {
       generated += await checkSpendingAnomalies();
     } catch (e) {
       if (kDebugMode) debugPrint('AlertService: anomaly check failed: $e');
+    }
+    try {
+      generated += await checkSignAnomaly();
+    } catch (e) {
+      if (kDebugMode) debugPrint('AlertService: sign anomaly check failed: $e');
     }
     return generated;
   }
@@ -242,6 +251,73 @@ class AlertService {
         expiresAt: Value(now
             .add(const Duration(days: 7))
             .millisecondsSinceEpoch),
+      ));
+      generated++;
+    }
+    return generated;
+  }
+
+  /// Detect accounts where transaction signs suggest invertSign should be enabled.
+  ///
+  /// For synced accounts with invertSign == false:
+  /// - Asset accounts with >70% negative transactions look suspicious
+  ///   (spending should be negative, but if the bank reports inverted signs,
+  ///   income appears negative instead)
+  /// - Liability accounts with >70% positive transactions look suspicious
+  /// Only alerts if the account has >= 5 transactions in the last 30 days.
+  Future<int> checkSignAnomaly() async {
+    final accounts = await _accountRepo.getAllAccounts();
+    final synced = accounts
+        .where((a) => !a.invertSign && a.lastSyncedAt != null)
+        .toList();
+    if (synced.isEmpty) return 0;
+
+    final now = DateTime.now();
+    final thirtyDaysAgo =
+        now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
+    var generated = 0;
+
+    for (final account in synced) {
+      final txns = await _transactionRepo.getTransactionsByDateRange(
+        thirtyDaysAgo,
+        now.millisecondsSinceEpoch,
+        accountId: account.id,
+      );
+      if (txns.length < 5) continue;
+
+      final negativeCount = txns.where((t) => t.amountCents < 0).length;
+      final positiveCount = txns.where((t) => t.amountCents > 0).length;
+      final ratio = txns.length > 0 ? negativeCount / txns.length : 0.0;
+      final positiveRatio = txns.length > 0 ? positiveCount / txns.length : 0.0;
+
+      final suspicious = account.isAsset
+          ? ratio > 0.7
+          : positiveRatio > 0.7;
+      if (!suspicious) continue;
+
+      final title = '${account.name} may need sign inversion';
+      if (await _insightRepo.hasRecentInsight(title, thirtyDaysAgo)) continue;
+
+      final description = account.isAsset
+          ? 'Most transactions in "${account.name}" are negative. '
+            'If your bank reports spending as positive, enable '
+            '"Invert Transaction Signs" in account settings.'
+          : 'Most transactions in "${account.name}" are positive. '
+            'If your bank reports payments as negative, enable '
+            '"Invert Transaction Signs" in account settings.';
+
+      await _insightRepo.insertInsight(InsightsCompanion(
+        id: Value(_uuid.v4()),
+        title: Value(title),
+        description: Value(description),
+        insightType: const Value('general'),
+        severity: const Value('info'),
+        isRead: const Value(false),
+        isDismissed: const Value(false),
+        createdAt: Value(now.millisecondsSinceEpoch),
+        expiresAt: Value(
+          now.add(const Duration(days: 30)).millisecondsSinceEpoch,
+        ),
       ));
       generated++;
     }

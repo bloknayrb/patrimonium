@@ -474,6 +474,26 @@ void main() {
 
       expect(preview.transactions[0].payee, 'STORE, INC.');
     });
+
+    test('invertSign=true negates parsed amounts', () async {
+      final path = writeCsv(
+        'Date,Amount,Payee\n'
+        '01/15/2026,50.00,STARBUCKS\n'
+        '01/16/2026,-25.50,WALMART\n',
+      );
+
+      when(() => mockTxnRepo.existsByExternalId(any()))
+          .thenAnswer((_) async => false);
+
+      final preview =
+          await service.parseFile(path, defaultConfig, invertSign: true);
+
+      expect(preview.transactions, hasLength(2));
+      // Normal: 50.00 → 5000 (positive=income). With invertSign, negated → -5000
+      expect(preview.transactions[0].amountCents, -5000);
+      // Normal: -25.50 → -2550 (negative=expense). With invertSign, negated → 2550
+      expect(preview.transactions[1].amountCents, 2550);
+    });
   });
 
   // ===========================================================================

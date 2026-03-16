@@ -207,6 +207,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _invertSignMeta = const VerificationMeta(
+    'invertSign',
+  );
+  @override
+  late final GeneratedColumn<bool> invertSign = GeneratedColumn<bool>(
+    'invert_sign',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("invert_sign" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -239,6 +254,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     createdAt,
     updatedAt,
     version,
+    invertSign,
     syncStatus,
   ];
   @override
@@ -398,6 +414,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         version.isAcceptableOrUnknown(data['version']!, _versionMeta),
       );
     }
+    if (data.containsKey('invert_sign')) {
+      context.handle(
+        _invertSignMeta,
+        invertSign.isAcceptableOrUnknown(data['invert_sign']!, _invertSignMeta),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -485,6 +507,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}version'],
       )!,
+      invertSign: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}invert_sign'],
+      )!,
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sync_status'],
@@ -517,6 +543,7 @@ class Account extends DataClass implements Insertable<Account> {
   final int createdAt;
   final int updatedAt;
   final int version;
+  final bool invertSign;
   final int syncStatus;
   const Account({
     required this.id,
@@ -537,6 +564,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.createdAt,
     required this.updatedAt,
     required this.version,
+    required this.invertSign,
     required this.syncStatus,
   });
   @override
@@ -574,6 +602,7 @@ class Account extends DataClass implements Insertable<Account> {
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     map['version'] = Variable<int>(version);
+    map['invert_sign'] = Variable<bool>(invertSign);
     map['sync_status'] = Variable<int>(syncStatus);
     return map;
   }
@@ -610,6 +639,7 @@ class Account extends DataClass implements Insertable<Account> {
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       version: Value(version),
+      invertSign: Value(invertSign),
       syncStatus: Value(syncStatus),
     );
   }
@@ -638,6 +668,7 @@ class Account extends DataClass implements Insertable<Account> {
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       version: serializer.fromJson<int>(json['version']),
+      invertSign: serializer.fromJson<bool>(json['invertSign']),
       syncStatus: serializer.fromJson<int>(json['syncStatus']),
     );
   }
@@ -663,6 +694,7 @@ class Account extends DataClass implements Insertable<Account> {
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'version': serializer.toJson<int>(version),
+      'invertSign': serializer.toJson<bool>(invertSign),
       'syncStatus': serializer.toJson<int>(syncStatus),
     };
   }
@@ -686,6 +718,7 @@ class Account extends DataClass implements Insertable<Account> {
     int? createdAt,
     int? updatedAt,
     int? version,
+    bool? invertSign,
     int? syncStatus,
   }) => Account(
     id: id ?? this.id,
@@ -712,6 +745,7 @@ class Account extends DataClass implements Insertable<Account> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     version: version ?? this.version,
+    invertSign: invertSign ?? this.invertSign,
     syncStatus: syncStatus ?? this.syncStatus,
   );
   Account copyWithCompanion(AccountsCompanion data) {
@@ -752,6 +786,9 @@ class Account extends DataClass implements Insertable<Account> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       version: data.version.present ? data.version.value : this.version,
+      invertSign: data.invertSign.present
+          ? data.invertSign.value
+          : this.invertSign,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -779,6 +816,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
+          ..write('invertSign: $invertSign, ')
           ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
@@ -804,6 +842,7 @@ class Account extends DataClass implements Insertable<Account> {
     createdAt,
     updatedAt,
     version,
+    invertSign,
     syncStatus,
   );
   @override
@@ -828,6 +867,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.version == this.version &&
+          other.invertSign == this.invertSign &&
           other.syncStatus == this.syncStatus);
 }
 
@@ -850,6 +890,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> version;
+  final Value<bool> invertSign;
   final Value<int> syncStatus;
   final Value<int> rowid;
   const AccountsCompanion({
@@ -871,6 +912,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.version = const Value.absent(),
+    this.invertSign = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -893,6 +935,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required int createdAt,
     required int updatedAt,
     this.version = const Value.absent(),
+    this.invertSign = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -922,6 +965,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? version,
+    Expression<bool>? invertSign,
     Expression<int>? syncStatus,
     Expression<int>? rowid,
   }) {
@@ -944,6 +988,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (version != null) 'version': version,
+      if (invertSign != null) 'invert_sign': invertSign,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (rowid != null) 'rowid': rowid,
     });
@@ -968,6 +1013,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? version,
+    Value<bool>? invertSign,
     Value<int>? syncStatus,
     Value<int>? rowid,
   }) {
@@ -990,6 +1036,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
+      invertSign: invertSign ?? this.invertSign,
       syncStatus: syncStatus ?? this.syncStatus,
       rowid: rowid ?? this.rowid,
     );
@@ -1052,6 +1099,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (version.present) {
       map['version'] = Variable<int>(version.value);
     }
+    if (invertSign.present) {
+      map['invert_sign'] = Variable<bool>(invertSign.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<int>(syncStatus.value);
     }
@@ -1082,6 +1132,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
+          ..write('invertSign: $invertSign, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -12921,6 +12972,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required int createdAt,
       required int updatedAt,
       Value<int> version,
+      Value<bool> invertSign,
       Value<int> syncStatus,
       Value<int> rowid,
     });
@@ -12944,6 +12996,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> version,
+      Value<bool> invertSign,
       Value<int> syncStatus,
       Value<int> rowid,
     });
@@ -13044,6 +13097,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get version => $composableBuilder(
     column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get invertSign => $composableBuilder(
+    column: $table.invertSign,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13152,6 +13210,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get invertSign => $composableBuilder(
+    column: $table.invertSign,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -13239,6 +13302,11 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<int> get version =>
       $composableBuilder(column: $table.version, builder: (column) => column);
 
+  GeneratedColumn<bool> get invertSign => $composableBuilder(
+    column: $table.invertSign,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -13291,6 +13359,7 @@ class $$AccountsTableTableManager
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
+                Value<bool> invertSign = const Value.absent(),
                 Value<int> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
@@ -13312,6 +13381,7 @@ class $$AccountsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
+                invertSign: invertSign,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),
@@ -13335,6 +13405,7 @@ class $$AccountsTableTableManager
                 required int createdAt,
                 required int updatedAt,
                 Value<int> version = const Value.absent(),
+                Value<bool> invertSign = const Value.absent(),
                 Value<int> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
@@ -13356,6 +13427,7 @@ class $$AccountsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
+                invertSign: invertSign,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),

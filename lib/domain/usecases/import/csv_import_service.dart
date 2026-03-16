@@ -137,6 +137,7 @@ class CsvImportService {
     String filePath,
     CsvImportConfig config, {
     String? accountId,
+    bool invertSign = false,
   }) async {
     final file = File(filePath);
     if (!await file.exists()) {
@@ -236,20 +237,21 @@ class CsvImportService {
 
       // Apply sign convention
       final signedCents = config.negativeIsExpense ? amountCents : -amountCents;
+      final finalCents = invertSign ? -signedCents : signedCents;
 
       // Generate external ID for duplicate detection
-      final externalId = _generateExternalId(date, signedCents, payee);
+      final externalId = _generateExternalId(date, finalCents, payee);
       final isDuplicateById = await _transactionRepo.existsByExternalId(externalId);
       final isDuplicateByFuzzy = accountId != null
           ? await _transactionRepo.existsByFuzzyMatch(
-              accountId, date.millisecondsSinceEpoch, signedCents)
+              accountId, date.millisecondsSinceEpoch, finalCents)
           : false;
       final isDuplicate = isDuplicateById || isDuplicateByFuzzy;
 
       transactions.add(ParsedTransaction(
         rowNumber: rowNumber,
         date: date,
-        amountCents: signedCents,
+        amountCents: finalCents,
         payee: payee,
         category: category?.isNotEmpty == true ? category : null,
         notes: notes?.isNotEmpty == true ? notes : null,

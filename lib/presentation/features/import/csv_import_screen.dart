@@ -8,6 +8,7 @@ import '../../../core/di/providers.dart';
 import '../../../core/error/app_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/usecases/import/csv_import_service.dart';
+import '../accounts/accounts_providers.dart';
 import 'widgets/column_mapping_step.dart';
 import 'widgets/preview_step.dart';
 
@@ -164,12 +165,18 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       negativeIsExpense: _negativeIsExpense,
     );
 
+    // Look up account to check invertSign
+    final accounts = ref.read(accountsProvider).valueOrNull ?? [];
+    final account = accounts.where((a) => a.id == accountId).firstOrNull;
+    final invertSign = account?.invertSign ?? false;
+
     try {
       final service = ref.read(csvImportServiceProvider);
       final preview = await service.parseFile(
         _filePathController.text.trim(),
         config,
         accountId: accountId,
+        invertSign: invertSign,
       );
       if (mounted) setState(() => _preview = preview);
     } catch (_) {

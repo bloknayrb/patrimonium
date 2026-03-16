@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:patrimonium/data/local/database/app_database.dart';
+import 'package:patrimonium/data/repositories/account_repository.dart';
 import 'package:patrimonium/data/repositories/budget_repository.dart';
 import 'package:patrimonium/data/repositories/category_repository.dart';
 import 'package:patrimonium/data/repositories/insight_repository.dart';
@@ -24,6 +25,8 @@ class MockTransactionRepository extends Mock implements TransactionRepository {}
 
 class MockCategoryRepository extends Mock implements CategoryRepository {}
 
+class MockAccountRepository extends Mock implements AccountRepository {}
+
 class FakeInsightsCompanion extends Fake implements InsightsCompanion {}
 
 void main() {
@@ -33,6 +36,7 @@ void main() {
   late MockRecurringTransactionRepository mockRecurringRepo;
   late MockTransactionRepository mockTransactionRepo;
   late MockCategoryRepository mockCategoryRepo;
+  late MockAccountRepository mockAccountRepo;
   late AlertService service;
 
   setUpAll(() {
@@ -46,6 +50,7 @@ void main() {
     mockRecurringRepo = MockRecurringTransactionRepository();
     mockTransactionRepo = MockTransactionRepository();
     mockCategoryRepo = MockCategoryRepository();
+    mockAccountRepo = MockAccountRepository();
     service = AlertService(
       insightRepo: mockInsightRepo,
       budgetRepo: mockBudgetRepo,
@@ -53,6 +58,7 @@ void main() {
       recurringRepo: mockRecurringRepo,
       transactionRepo: mockTransactionRepo,
       categoryRepo: mockCategoryRepo,
+      accountRepo: mockAccountRepo,
     );
 
     when(() => mockInsightRepo.insertInsight(any())).thenAnswer((_) async {});
@@ -249,14 +255,171 @@ void main() {
       when(() => mockBudgetRepo.getAllBudgets()).thenThrow(Exception('db error'));
       when(() => mockRecurringRepo.getActiveRecurring())
           .thenAnswer((_) async => []);
-      when(() => mockTransactionRepo.getTransactionsByDateRange(any(), any()))
+      when(() => mockTransactionRepo.getTransactionsByDateRange(any(), any(),
+              accountId: any(named: 'accountId'),
+              categoryId: any(named: 'categoryId')))
           .thenAnswer((_) async => []);
       when(() => mockCategoryRepo.getAllCategories())
+          .thenAnswer((_) async => []);
+      when(() => mockAccountRepo.getAllAccounts())
           .thenAnswer((_) async => []);
 
       // Should not throw, should return 0
       final count = await service.runAllChecks();
       expect(count, 0);
+    });
+  });
+
+  group('checkSignAnomaly', () {
+    Account _makeAccount({
+      required String id,
+      required bool isAsset,
+      bool invertSign = false,
+      int? lastSyncedAt,
+    }) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      return Account(
+        id: id,
+        name: 'Test Account',
+        accountType: isAsset ? 'checking' : 'credit_card',
+        balanceCents: 100000,
+        currencyCode: 'USD',
+        isAsset: isAsset,
+        isHidden: false,
+        invertSign: invertSign,
+        displayOrder: 0,
+        createdAt: now,
+        updatedAt: now,
+        lastSyncedAt: lastSyncedAt ?? now,
+        version: 1,
+        syncStatus: 0,
+      );
+    }
+
+    Transaction _makeTxn({required String id, required int amountCents}) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      return Transaction(
+        id: id,
+        accountId: 'acc-1',
+        amountCents: amountCents,
+        date: now,
+        payee: 'Test',
+        isReviewed: false,
+        isPending: false,
+        createdAt: now,
+        updatedAt: now,
+        version: 1,
+        syncStatus: 0,
+      );
+    }
+
+    test('alerts for asset account with >70% negative transactions', () async {
+      final account = _makeAccount(id: 'acc-1', isAsset: true);
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => [account]);
+      // 8 negative out of 10 = 80%
+      when(() => mockTransactionRepo.getTransactionsByDateRange(
+            any(), any(),
+            accountId: 'acc-1',
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => [
+            for (var i = 0; i < 8; i++)
+              _makeTxn(id: 'txn-neg-$i', amountCents: -500),
+            _makeTxn(id: 'txn-pos-1', amountCents: 500),
+            _makeTxn(id: 'txn-pos-2', amountCents: 500),
+          ]);
+      when(() => mockInsightRepo.hasRecentInsight(any(), any()))
+          .thenAnswer((_) async => false);
+
+      final count = await service.checkSignAnomaly();
+
+      expect(count, 1);
+      verify(() => mockInsightRepo.insertInsight(any())).called(1);
+    });
+
+    test('does not alert when invertSign is already true', () async {
+      final account =
+          _makeAccount(id: 'acc-1', isAsset: true, invertSign: true);
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => [account]);
+
+      final count = await service.checkSignAnomaly();
+
+      expect(count, 0);
+      verifyNever(() => mockInsightRepo.insertInsight(any()));
+    });
+
+    test('does not alert when account is not synced', () async {
+      final account =
+          _makeAccount(id: 'acc-1', isAsset: true, lastSyncedAt: null);
+      // lastSyncedAt is null so it's filtered out — but Account constructor
+      // requires non-null for other fields, so we set it explicitly
+      final unsyncedAccount = Account(
+        id: 'acc-1',
+        name: 'Test',
+        accountType: 'checking',
+        balanceCents: 100000,
+        currencyCode: 'USD',
+        isAsset: true,
+        isHidden: false,
+        invertSign: false,
+        displayOrder: 0,
+        lastSyncedAt: null,
+        createdAt: 0,
+        updatedAt: 0,
+        version: 1,
+        syncStatus: 0,
+      );
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => [unsyncedAccount]);
+
+      final count = await service.checkSignAnomaly();
+
+      expect(count, 0);
+    });
+
+    test('does not alert with fewer than 5 transactions', () async {
+      final account = _makeAccount(id: 'acc-1', isAsset: true);
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => [account]);
+      when(() => mockTransactionRepo.getTransactionsByDateRange(
+            any(), any(),
+            accountId: 'acc-1',
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => [
+            _makeTxn(id: 'txn-1', amountCents: -500),
+            _makeTxn(id: 'txn-2', amountCents: -500),
+            _makeTxn(id: 'txn-3', amountCents: -500),
+          ]);
+
+      final count = await service.checkSignAnomaly();
+
+      expect(count, 0);
+      verifyNever(() => mockInsightRepo.insertInsight(any()));
+    });
+
+    test('alerts for liability account with >70% positive transactions',
+        () async {
+      final account = _makeAccount(id: 'acc-1', isAsset: false);
+      when(() => mockAccountRepo.getAllAccounts())
+          .thenAnswer((_) async => [account]);
+      // 8 positive out of 10 = 80%
+      when(() => mockTransactionRepo.getTransactionsByDateRange(
+            any(), any(),
+            accountId: 'acc-1',
+            categoryId: any(named: 'categoryId'),
+          )).thenAnswer((_) async => [
+            for (var i = 0; i < 8; i++)
+              _makeTxn(id: 'txn-pos-$i', amountCents: 500),
+            _makeTxn(id: 'txn-neg-1', amountCents: -500),
+            _makeTxn(id: 'txn-neg-2', amountCents: -500),
+          ]);
+      when(() => mockInsightRepo.hasRecentInsight(any(), any()))
+          .thenAnswer((_) async => false);
+
+      final count = await service.checkSignAnomaly();
+
+      expect(count, 1);
     });
   });
 }

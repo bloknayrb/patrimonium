@@ -160,6 +160,7 @@ final alertServiceProvider = Provider<AlertService>((ref) {
     recurringRepo: ref.watch(recurringTransactionRepositoryProvider),
     transactionRepo: ref.watch(transactionRepositoryProvider),
     categoryRepo: ref.watch(categoryRepositoryProvider),
+    accountRepo: ref.watch(accountRepositoryProvider),
   );
 });
 
