@@ -91,6 +91,9 @@ class _AutoLockObserverState extends ConsumerState<_AutoLockObserver>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
+    final requirePin = ref.read(requirePinCachedProvider);
+    if (!requirePin) return; // PIN disabled — skip auto-lock
+
     final isUnlocked = ref.read(isUnlockedProvider);
     if (!isUnlocked) return; // Only track if app is unlocked
 

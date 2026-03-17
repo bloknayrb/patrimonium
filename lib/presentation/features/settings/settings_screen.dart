@@ -22,6 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appThemeMode = ref.watch(appThemeModeProvider);
+    final requirePin = ref.watch(requirePinCachedProvider);
     final biometricAvailable = ref.watch(biometricAvailableProvider);
     final biometricEnabled = ref.watch(biometricEnabledProvider);
     final autoLockTimeout = ref.watch(autoLockTimeoutProvider);
@@ -145,52 +146,74 @@ class SettingsScreen extends ConsumerWidget {
           // Security
           const _SectionHeader(title: 'Security'),
 
-          // Biometric toggle - only show if device supports it
-          if (biometricAvailable.valueOrNull == true)
-            ListTile(
-              leading: const Icon(Icons.fingerprint),
-              title: const Text('Biometric Authentication'),
-              subtitle: const Text('Use fingerprint or face to unlock'),
-              trailing: Switch(
-                value: biometricEnabled.valueOrNull ?? false,
-                onChanged: (value) async {
-                  final biometricService = ref.read(biometricServiceProvider);
-                  if (value) {
-                    // Verify biometric works before enabling
-                    final success = await biometricService.verifyAndEnable();
-                    if (!success && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('Biometric authentication failed. Please try again.'),
-                        ),
-                      );
-                    }
-                  } else {
-                    await biometricService.setEnabled(false);
-                  }
-                  ref.invalidate(biometricEnabledProvider);
-                },
-              ),
-            ),
-
-          ListTile(
-            leading: const Icon(Icons.pin),
-            title: const Text('Change PIN'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              context.push(AppRoutes.pinChange);
+          SwitchListTile(
+            secondary: const Icon(Icons.lock_open),
+            title: const Text('Require PIN on launch'),
+            subtitle: const Text('Lock the app with a PIN when opening'),
+            value: requirePin,
+            onChanged: (value) async {
+              final storage = ref.read(secureStorageProvider);
+              await storage.setRequirePinEnabled(value);
+              ref.read(requirePinCachedProvider.notifier).state = value;
+              if (!value) {
+                // Immediately unlock so auto-lock doesn't trigger
+                ref.read(isUnlockedProvider.notifier).state = true;
+              } else if (!ref.read(hasPinCachedProvider)) {
+                // PIN required but none set — navigate to setup
+                if (context.mounted) context.push(AppRoutes.pinSetup);
+              }
             },
           ),
 
-          ListTile(
-            leading: const Icon(Icons.timer),
-            title: const Text('Auto-Lock Timeout'),
-            subtitle: Text(_formatTimeout(autoLockTimeout.valueOrNull ?? 300)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showTimeoutPicker(context, ref,
-                autoLockTimeout.valueOrNull ?? 300),
-          ),
+          // Only show PIN-related settings when PIN is required
+          if (requirePin) ...[
+            // Biometric toggle - only show if device supports it
+            if (biometricAvailable.valueOrNull == true)
+              ListTile(
+                leading: const Icon(Icons.fingerprint),
+                title: const Text('Biometric Authentication'),
+                subtitle: const Text('Use fingerprint or face to unlock'),
+                trailing: Switch(
+                  value: biometricEnabled.valueOrNull ?? false,
+                  onChanged: (value) async {
+                    final biometricService = ref.read(biometricServiceProvider);
+                    if (value) {
+                      // Verify biometric works before enabling
+                      final success = await biometricService.verifyAndEnable();
+                      if (!success && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Biometric authentication failed. Please try again.'),
+                          ),
+                        );
+                      }
+                    } else {
+                      await biometricService.setEnabled(false);
+                    }
+                    ref.invalidate(biometricEnabledProvider);
+                  },
+                ),
+              ),
+
+            ListTile(
+              leading: const Icon(Icons.pin),
+              title: const Text('Change PIN'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                context.push(AppRoutes.pinChange);
+              },
+            ),
+
+            ListTile(
+              leading: const Icon(Icons.timer),
+              title: const Text('Auto-Lock Timeout'),
+              subtitle: Text(_formatTimeout(autoLockTimeout.valueOrNull ?? 300)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showTimeoutPicker(context, ref,
+                  autoLockTimeout.valueOrNull ?? 300),
+            ),
+          ],
 
           const Divider(),
 

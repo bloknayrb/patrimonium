@@ -89,8 +89,10 @@ Future<void> main() async {
   }
 
   // Cache PIN state for synchronous router redirects
-  final pinService = PinService(SecureStorageService());
+  final secureStorage = SecureStorageService();
+  final pinService = PinService(secureStorage);
   final hasPin = await pinService.hasPin();
+  final requirePin = await secureStorage.getRequirePinEnabled();
 
   // Initialize Sentry for crash reporting (DSN provided at build time)
   const sentryDsn = String.fromEnvironment('SENTRY_DSN');
@@ -101,19 +103,20 @@ Future<void> main() async {
         options.tracesSampleRate = 1.0; // 100% — single-user personal app
         options.environment = kReleaseMode ? 'production' : 'debug';
       },
-      appRunner: () => _runApp(database, hasPin: hasPin),
+      appRunner: () => _runApp(database, hasPin: hasPin, requirePin: requirePin),
     );
   } else {
-    _runApp(database, hasPin: hasPin);
+    _runApp(database, hasPin: hasPin, requirePin: requirePin);
   }
 }
 
-void _runApp(AppDatabase database, {bool hasPin = false}) {
+void _runApp(AppDatabase database, {bool hasPin = false, bool requirePin = true}) {
   runApp(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(database),
         hasPinCachedProvider.overrideWith((_) => hasPin),
+        requirePinCachedProvider.overrideWith((_) => requirePin),
       ],
       child: const PatrimoniumApp(),
     ),
