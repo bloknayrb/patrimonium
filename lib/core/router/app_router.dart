@@ -117,8 +117,10 @@ GoRouter createAppRouter(Ref ref) {
         return AppRoutes.pinSetup;
       }
 
-      // If PIN is disabled, skip all lock/redirect logic
-      // (still allow explicit navigation to pin-setup and pin-change)
+      // If PIN is disabled, skip all lock/redirect logic.
+      // IMPORTANT: This block must come before the isUnlocked check below.
+      // When toggling PIN off, requirePin changes before isUnlocked — this
+      // early return prevents a momentary redirect to /lock.
       if (!requirePin && path != AppRoutes.pinSetup && path != AppRoutes.pinChange) {
         // Redirect away from lock screen since PIN isn't required
         if (path == AppRoutes.lock) return AppRoutes.dashboard;
