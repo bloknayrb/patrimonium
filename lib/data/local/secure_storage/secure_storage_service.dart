@@ -31,6 +31,8 @@ class SecureStorageService {
   static const _activeLlmModel = 'llm_active_model';
   static const _llmConsentGiven = 'llm_cloud_consent';
 
+  static const _requirePin = 'require_pin';
+
   static const _themeMode = 'theme_mode';
 
   static const _supabaseUrl = 'supabase_url';
@@ -56,6 +58,16 @@ class SecureStorageService {
     await _storage.delete(key: _pinHash);
     await _storage.delete(key: _pinSalt);
   }
+
+  // ─── Require PIN ─────────────────────────────────────────────────
+
+  Future<bool> getRequirePinEnabled() async {
+    final value = await _storage.read(key: _requirePin);
+    return value != 'false'; // defaults to true
+  }
+
+  Future<void> setRequirePinEnabled(bool enabled) =>
+      _storage.write(key: _requirePin, value: enabled.toString());
 
   // ─── Biometric ────────────────────────────────────────────────────
 

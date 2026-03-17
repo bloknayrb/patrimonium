@@ -107,6 +107,7 @@ GoRouter createAppRouter(Ref ref) {
     initialLocation: AppRoutes.lock,
     redirect: (context, state) {
       final path = state.uri.path;
+      final requirePin = ref.read(requirePinCachedProvider);
 
       // Check if PIN has been set up (cached synchronously at startup)
       final hasPin = ref.read(hasPinCachedProvider);
@@ -114,6 +115,14 @@ GoRouter createAppRouter(Ref ref) {
       // If no PIN set and not already on setup screen, redirect to setup
       if (!hasPin && path != AppRoutes.pinSetup) {
         return AppRoutes.pinSetup;
+      }
+
+      // If PIN is disabled, skip all lock/redirect logic
+      // (still allow explicit navigation to pin-setup and pin-change)
+      if (!requirePin && path != AppRoutes.pinSetup && path != AppRoutes.pinChange) {
+        // Redirect away from lock screen since PIN isn't required
+        if (path == AppRoutes.lock) return AppRoutes.dashboard;
+        return null;
       }
 
       // If PIN is set and user is trying to access setup, redirect to lock
