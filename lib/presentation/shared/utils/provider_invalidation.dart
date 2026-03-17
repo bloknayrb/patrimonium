@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/analytics/analytics_providers.dart';
 import '../../features/budgets/budgets_providers.dart';
 import '../../features/dashboard/dashboard_providers.dart';
 import '../../features/transactions/transactions_providers.dart';
@@ -16,4 +17,5 @@ void invalidateFinancialData(WidgetRef ref) {
   ref.invalidate(netWorthHistoryProvider);
   ref.invalidate(uncategorizedCountProvider);
   ref.invalidate(budgetsWithSpentProvider);
+  ref.invalidate(monthlyCashFlowProvider);
 }
