@@ -3,11 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+
+final _appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return info.version;
+});
 
 /// Settings screen with app configuration sections.
 class SettingsScreen extends ConsumerWidget {
@@ -252,10 +258,12 @@ class SettingsScreen extends ConsumerWidget {
 
           // About
           const _SectionHeader(title: 'About'),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text(AppConstants.appName),
-            subtitle: Text('Version ${AppConstants.appVersion}'),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text(AppConstants.appName),
+            subtitle: Text(
+              'Version ${ref.watch(_appVersionProvider).valueOrNull ?? '...'}',
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.description),
@@ -265,7 +273,8 @@ class SettingsScreen extends ConsumerWidget {
               showLicensePage(
                 context: context,
                 applicationName: AppConstants.appName,
-                applicationVersion: AppConstants.appVersion,
+                applicationVersion:
+                    ref.read(_appVersionProvider).valueOrNull ?? '',
               );
             },
           ),
