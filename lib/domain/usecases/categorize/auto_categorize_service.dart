@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../data/local/database/app_database.dart';
+import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/auto_categorize_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 
@@ -13,10 +14,13 @@ import '../../../data/repositories/transaction_repository.dart';
 /// 1. Payee cache lookup (learned from user assignments)
 /// 2. Rules engine (priority-ordered pattern matching)
 class AutoCategorizeService {
-  AutoCategorizeService(this._autoCatRepo, this._transactionRepo);
+  AutoCategorizeService(this._autoCatRepo, this._transactionRepo,
+      {AccountRepository? accountRepo})
+      : _accountRepo = accountRepo;
 
   final AutoCategorizeRepository _autoCatRepo;
   final TransactionRepository _transactionRepo;
+  final AccountRepository? _accountRepo;
 
   static const _confidenceThreshold = 0.8;
 
@@ -359,15 +363,27 @@ class AutoCategorizeService {
   /// Returns the number of transactions that were categorized.
   Future<int> categorizeUncategorized() async {
     final uncategorized = await _transactionRepo.getUncategorizedTransactions();
-    final rules = await loadEnabledRules();
-    var count = 0;
+    if (uncategorized.isEmpty) return 0;
 
+    final rules = await loadEnabledRules();
+
+    // Build accountId → accountType lookup only if rules use accountType filtering
+    final accountTypeMap = <String, String>{};
+    if (_accountRepo != null && rules.any((r) => r.accountType != null)) {
+      final accounts = await _accountRepo.getAllAccounts();
+      for (final a in accounts) {
+        accountTypeMap[a.id] = a.accountType;
+      }
+    }
+
+    var count = 0;
     for (final txn in uncategorized) {
       final categoryId = await categorizeWithPreloadedRules(
         txn.payee,
         rules,
         amountCents: txn.amountCents,
         accountId: txn.accountId,
+        accountType: accountTypeMap[txn.accountId],
       );
       if (categoryId != null) {
         await _transactionRepo.updateCategory(txn.id, categoryId);

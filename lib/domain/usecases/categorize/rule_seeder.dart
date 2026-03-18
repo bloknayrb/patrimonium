@@ -89,14 +89,27 @@ class RuleSeeder {
     return true;
   }
 
-  /// Backfill investment-specific rules for existing users who already
-  /// have merchant rules but are missing the newer investment rules.
+  /// Backfill missing investment rules for existing users.
+  ///
+  /// Uses set-based dedup: builds a set of existing (payeeContains, accountType)
+  /// combos and only inserts rules that don't already exist. This is
+  /// self-healing — any time investmentMerchantMappings grows, the next
+  /// startup backfills only the missing entries.
   Future<bool> _backfillInvestmentRules() async {
-    // Check if investment rules already exist by looking for any rule
-    // with a non-null accountType
     final existingRules = await _autoCatRepo.getEnabledRules();
-    final hasInvestmentRules = existingRules.any((r) => r.accountType != null);
-    if (hasInvestmentRules) return false;
+
+    // Build set of existing investment rule signatures
+    final existingKeys = <String>{};
+    for (final r in existingRules) {
+      if (r.accountType != null && r.payeeContains != null) {
+        existingKeys.add('${r.payeeContains!.toUpperCase()}|${r.accountType}');
+      }
+    }
+
+    // Check which mappings are missing before loading categories
+    final missing = investmentMerchantMappings.where((m) =>
+        !existingKeys.contains('${m.$1.toUpperCase()}|${m.$3}'));
+    if (missing.isEmpty) return false;
 
     final categories = await _categoryRepo.getAllCategories();
     final catByName = <String, String>{};
@@ -105,12 +118,10 @@ class RuleSeeder {
     }
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    // Start priority after existing rules
     var priority = existingRules.length;
     final rules = <AutoCategorizeRulesCompanion>[];
 
-    for (final (payeeContains, categoryName, accountType)
-        in investmentMerchantMappings) {
+    for (final (payeeContains, categoryName, accountType) in missing) {
       final categoryId = catByName[categoryName];
       if (categoryId == null) continue;
 

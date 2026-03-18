@@ -423,52 +423,151 @@ const defaultMerchantMappings = <(String, String)>[
 /// specified account type.
 const investmentMerchantMappings = <(String, String, String)>[
   // -------------------------------------------------------------------------
-  // Dividends (income)
+  // Dividends (income) — specific patterns first, then broad
   // -------------------------------------------------------------------------
+  ('DIV REINVEST', 'Dividends', 'brokerage'),
+  ('DIV REINVEST', 'Dividends', '401k'),
+  ('DIV REINVEST', 'Dividends', 'ira'),
+  ('DIV REINVEST', 'Dividends', 'roth_ira'),
+  ('DIV REINVEST', 'Dividends', 'hsa'),
+  ('REINVEST DIV', 'Dividends', 'brokerage'),
+  ('REINVEST DIV', 'Dividends', '401k'),
+  ('REINVEST DIV', 'Dividends', 'ira'),
+  ('REINVEST DIV', 'Dividends', 'roth_ira'),
+  ('INCOME DIST', 'Dividends', 'brokerage'),
+  ('INCOME DIST', 'Dividends', '401k'),
   ('DIVIDEND', 'Dividends', 'brokerage'),
   ('DIVIDEND', 'Dividends', '401k'),
   ('DIVIDEND', 'Dividends', 'ira'),
   ('DIVIDEND', 'Dividends', 'roth_ira'),
   ('DIVIDEND', 'Dividends', 'hsa'),
-  ('DIV REINVEST', 'Dividends', 'brokerage'),
+  // "DIV " (trailing space) catches Fidelity short form: "DIV - ISHARES..."
+  ('DIV ', 'Dividends', 'brokerage'),
+  ('DIV ', 'Dividends', '401k'),
+  ('DIV ', 'Dividends', 'ira'),
+  ('DIV ', 'Dividends', 'roth_ira'),
+  ('DIV ', 'Dividends', 'hsa'),
+  ('DIST -', 'Dividends', 'brokerage'),
   ('REINVEST', 'Dividends', 'brokerage'),
+  ('REINVEST', 'Dividends', '401k'),
+  ('REINVEST', 'Dividends', 'ira'),
+  ('REINVEST', 'Dividends', 'roth_ira'),
 
   // -------------------------------------------------------------------------
   // Interest (income)
   // -------------------------------------------------------------------------
   ('INTEREST', 'Interest', 'brokerage'),
+  ('INTEREST', 'Interest', '401k'),
+  ('INTEREST', 'Interest', 'ira'),
+  ('INTEREST', 'Interest', 'roth_ira'),
   ('INTEREST', 'Interest', 'hsa'),
-
-  // -------------------------------------------------------------------------
-  // Buy / Sell (income parent: Investments)
-  // -------------------------------------------------------------------------
-  ('BUY', 'Investments', 'brokerage'),
-  ('BOUGHT', 'Investments', 'brokerage'),
-  ('PURCHASE', 'Investments', 'brokerage'),
-  ('SELL', 'Investments', 'brokerage'),
-  ('SOLD', 'Investments', 'brokerage'),
-  ('SALE', 'Investments', 'brokerage'),
 
   // -------------------------------------------------------------------------
   // Capital Gains (income subcategory)
   // -------------------------------------------------------------------------
   ('CAPITAL GAIN', 'Capital Gains', 'brokerage'),
+  ('CAPITAL GAIN', 'Capital Gains', '401k'),
+  ('CAPITAL GAIN', 'Capital Gains', 'ira'),
+  ('CAPITAL GAIN', 'Capital Gains', 'roth_ira'),
+  ('CAP GAIN', 'Capital Gains', 'brokerage'),
+  ('CAP GAIN', 'Capital Gains', '401k'),
+
+  // -------------------------------------------------------------------------
+  // Buy / Sell / Trade
+  // -------------------------------------------------------------------------
+  ('BUY', 'Investments', 'brokerage'),
+  ('BUY', 'Investments', '401k'),
+  ('BOUGHT', 'Investments', 'brokerage'),
+  ('PURCHASE', 'Investments', 'brokerage'),
+  ('PURCHASE', 'Investments', '401k'),
+  ('SELL', 'Investments', 'brokerage'),
+  ('SELL', 'Investments', '401k'),
+  ('SOLD', 'Investments', 'brokerage'),
+  ('SALE', 'Investments', 'brokerage'),
+  ('REDEMPTION', 'Investments', 'brokerage'),
+  ('REDEMPTION', 'Investments', '401k'),
 
   // -------------------------------------------------------------------------
   // Contributions
   // -------------------------------------------------------------------------
+  ('EMPLOYER MATCH', 'Investments', '401k'),
+  ('EMPLOYER CONTRIB', 'Investments', '401k'),
+  ('EE CONTRIB', 'Investments', '401k'),
+  ('ER CONTRIB', 'Investments', '401k'),
   ('CONTRIBUTION', 'Investments', '401k'),
   ('CONTRIBUTION', 'Investments', 'ira'),
   ('CONTRIBUTION', 'Investments', 'roth_ira'),
   ('CONTRIBUTION', 'Investments', 'hsa'),
-  ('EMPLOYER MATCH', 'Investments', '401k'),
+  ('PRETAX', 'Investments', '401k'),
+  ('ROTH DEFERRAL', 'Investments', '401k'),
+  ('DEFERRAL', 'Investments', '401k'),
+  ('PAYROLL', 'Investments', '401k'),
+  ('PAYROLL', 'Investments', 'hsa'),
+  ('CATCH-UP', 'Investments', '401k'),
+  ('SAFE HARBOR', 'Investments', '401k'),
+  ('PROFIT SHARING', 'Investments', '401k'),
+
+  // -------------------------------------------------------------------------
+  // Transfers / Rollovers
+  // -------------------------------------------------------------------------
+  ('TRANSFERS IN/OUT', 'Investments', '401k'),
+  ('TRANSFERS IN/OUT', 'Investments', 'ira'),
+  ('TRANSFERS IN/OUT', 'Investments', 'roth_ira'),
+  ('TRANSFER IN', 'Investments', '401k'),
+  ('TRANSFER IN', 'Investments', 'ira'),
+  ('TRANSFER IN', 'Investments', 'roth_ira'),
+  ('TRANSFER IN', 'Investments', 'hsa'),
+  ('TRANSFER OUT', 'Investments', '401k'),
+  ('TRANSFER OUT', 'Investments', 'ira'),
+  ('TRANSFER OUT', 'Investments', 'roth_ira'),
+  ('TRANSFER OUT', 'Investments', 'hsa'),
+  ('ROLLOVER', 'Investments', '401k'),
+  ('ROLLOVER', 'Investments', 'ira'),
+  ('ROTH CONVERSION', 'Investments', 'roth_ira'),
+  ('EXCHANGE IN', 'Investments', '401k'),
+  ('EXCHANGE OUT', 'Investments', '401k'),
+  ('REBALANCE', 'Investments', '401k'),
+  ('REBALANCE', 'Investments', 'brokerage'),
+
+  // -------------------------------------------------------------------------
+  // Distributions
+  // -------------------------------------------------------------------------
+  ('DISTRIBUTION', 'Distributions', '401k'),
+  ('DISTRIBUTION', 'Distributions', 'ira'),
+  ('DISTRIBUTION', 'Distributions', 'roth_ira'),
+  ('RMD', 'Distributions', 'ira'),
+  ('RMD', 'Distributions', '401k'),
+  ('WITHDRAWAL', 'Distributions', '401k'),
+  ('WITHDRAWAL', 'Distributions', 'ira'),
+  ('DISBURSEMENT', 'Distributions', '401k'),
+  ('HARDSHIP', 'Distributions', '401k'),
+  ('LOAN REPAY', 'Investments', '401k'),
+  ('LOAN DISBURS', 'Investments', '401k'),
 
   // -------------------------------------------------------------------------
   // Investment Fees (expense)
   // -------------------------------------------------------------------------
+  ('RECORDKEEP', 'Advisory Fees', '401k'),
+  ('AUDIT FEE', 'Advisory Fees', '401k'),
+  ('IQPA', 'Advisory Fees', '401k'),
+  ('ADMIN FEE', 'Advisory Fees', '401k'),
+  ('PLAN FEE', 'Advisory Fees', '401k'),
+  ('PARTICIPANT FEE', 'Advisory Fees', '401k'),
   ('ADVISORY FEE', 'Advisory Fees', 'brokerage'),
   ('ADVISORY FEE', 'Advisory Fees', '401k'),
+  ('ADVISORY FEE', 'Advisory Fees', 'ira'),
+  ('ADVISORY FEE', 'Advisory Fees', 'roth_ira'),
   ('MANAGEMENT FEE', 'Advisory Fees', 'brokerage'),
+  ('MANAGEMENT FEE', 'Advisory Fees', '401k'),
   ('EXPENSE RATIO', 'Advisory Fees', '401k'),
+  ('CUSTODIAL FEE', 'Advisory Fees', 'ira'),
+  ('CUSTODIAL FEE', 'Advisory Fees', 'roth_ira'),
+  ('ANNUAL FEE', 'Advisory Fees', 'brokerage'),
+  ('ANNUAL FEE', 'Advisory Fees', 'ira'),
+  ('ANNUAL FEE', 'Advisory Fees', 'roth_ira'),
+  ('ACCOUNT FEE', 'Advisory Fees', 'brokerage'),
+  ('ACCOUNT FEE', 'Advisory Fees', 'ira'),
+  ('ACCOUNT FEE', 'Advisory Fees', 'roth_ira'),
+  ('ACCOUNT FEE', 'Advisory Fees', 'hsa'),
   ('COMMISSION', 'Trading Commissions', 'brokerage'),
 ];

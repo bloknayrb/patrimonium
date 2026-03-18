@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:moneymoney/data/local/database/app_database.dart';
+import 'package:moneymoney/data/repositories/account_repository.dart';
 import 'package:moneymoney/data/repositories/auto_categorize_repository.dart';
 import 'package:moneymoney/data/repositories/transaction_repository.dart';
 import 'package:moneymoney/domain/usecases/categorize/auto_categorize_service.dart';
@@ -9,6 +10,8 @@ class MockAutoCategorizeRepository extends Mock
     implements AutoCategorizeRepository {}
 
 class MockTransactionRepository extends Mock implements TransactionRepository {}
+
+class MockAccountRepository extends Mock implements AccountRepository {}
 
 void main() {
   late MockAutoCategorizeRepository mockAutoCatRepo;
@@ -576,6 +579,217 @@ void main() {
       verify(() => mockTxnRepo.updateCategory('txn-1', 'cat-dining')).called(1);
       verifyNever(() => mockTxnRepo.updateCategory('txn-2', any()));
     });
+
+    test('returns 0 immediately when no uncategorized transactions', () async {
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => []);
+
+      final count = await service.categorizeUncategorized();
+
+      expect(count, equals(0));
+      verifyNever(() => mockAutoCatRepo.getEnabledRules());
+    });
+  });
+
+  group('categorizeUncategorized with accountType', () {
+    late MockAccountRepository mockAccountRepo;
+    late AutoCategorizeService serviceWithAccounts;
+
+    setUp(() {
+      mockAccountRepo = MockAccountRepository();
+      serviceWithAccounts = AutoCategorizeService(
+        mockAutoCatRepo,
+        mockTxnRepo,
+        accountRepo: mockAccountRepo,
+      );
+    });
+
+    test('passes accountType from account lookup to investment rules',
+        () async {
+      final txns = [
+        _makeTransaction(
+          id: 'txn-1',
+          payee: 'DIV - ISHARES RUSSELL 1000',
+          amountCents: 2597,
+          accountId: 'acc-401k',
+        ),
+      ];
+
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => txns);
+      when(() => mockAccountRepo.getAllAccounts()).thenAnswer(
+        (_) async => [_makeAccount(id: 'acc-401k', accountType: '401k')],
+      );
+      when(() => mockAutoCatRepo.getCacheEntry('DIV - ISHARES RUSSELL 1000'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules()).thenAnswer(
+        (_) async => [
+          _makeRule(
+            id: 'rule-div',
+            priority: 1,
+            payeeContains: 'DIV ',
+            categoryId: 'cat-dividends',
+            accountType: '401k',
+          ),
+        ],
+      );
+      when(() => mockTxnRepo.updateCategory(any(), any()))
+          .thenAnswer((_) async {});
+
+      final count = await serviceWithAccounts.categorizeUncategorized();
+
+      expect(count, equals(1));
+      verify(() => mockTxnRepo.updateCategory('txn-1', 'cat-dividends'))
+          .called(1);
+    });
+
+    test('investment rule does NOT match without accountRepo', () async {
+      // Service without accountRepo — investment rules should not fire
+      final txns = [
+        _makeTransaction(
+          id: 'txn-1',
+          payee: 'RECORDKEEPING FEE-WELLINGTON',
+          amountCents: -117,
+          accountId: 'acc-401k',
+        ),
+      ];
+
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => txns);
+      when(() => mockAutoCatRepo.getCacheEntry(
+              'RECORDKEEPING FEE-WELLINGTON'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules()).thenAnswer(
+        (_) async => [
+          _makeRule(
+            id: 'rule-rk',
+            priority: 1,
+            payeeContains: 'RECORDKEEP',
+            categoryId: 'cat-advisory-fees',
+            accountType: '401k',
+          ),
+        ],
+      );
+
+      final count = await service.categorizeUncategorized();
+
+      expect(count, equals(0));
+      verifyNever(() => mockTxnRepo.updateCategory(any(), any()));
+    });
+
+    test('matches IQPA audit fee pattern for 401k', () async {
+      final txns = [
+        _makeTransaction(
+          id: 'txn-1',
+          payee: 'IQPA Audit Fees-Fidelity Mid Cap Index',
+          amountCents: -5,
+          accountId: 'acc-401k',
+        ),
+      ];
+
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => txns);
+      when(() => mockAccountRepo.getAllAccounts()).thenAnswer(
+        (_) async => [_makeAccount(id: 'acc-401k', accountType: '401k')],
+      );
+      when(() => mockAutoCatRepo.getCacheEntry(
+              'IQPA AUDIT FEES-FIDELITY MID CAP INDEX'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules()).thenAnswer(
+        (_) async => [
+          _makeRule(
+            id: 'rule-iqpa',
+            priority: 1,
+            payeeContains: 'IQPA',
+            categoryId: 'cat-advisory-fees',
+            accountType: '401k',
+          ),
+        ],
+      );
+      when(() => mockTxnRepo.updateCategory(any(), any()))
+          .thenAnswer((_) async {});
+
+      final count = await serviceWithAccounts.categorizeUncategorized();
+
+      expect(count, equals(1));
+      verify(() => mockTxnRepo.updateCategory('txn-1', 'cat-advisory-fees'))
+          .called(1);
+    });
+
+    test('matches Transfers In/Out pattern for 401k', () async {
+      final txns = [
+        _makeTransaction(
+          id: 'txn-1',
+          payee: 'Transfers In/Out-Fidelity 500 Index Fund',
+          amountCents: 78664,
+          accountId: 'acc-401k',
+        ),
+      ];
+
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => txns);
+      when(() => mockAccountRepo.getAllAccounts()).thenAnswer(
+        (_) async => [_makeAccount(id: 'acc-401k', accountType: '401k')],
+      );
+      when(() => mockAutoCatRepo.getCacheEntry(
+              'TRANSFERS IN/OUT-FIDELITY 500 INDEX FUND'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules()).thenAnswer(
+        (_) async => [
+          _makeRule(
+            id: 'rule-xfer',
+            priority: 1,
+            payeeContains: 'TRANSFERS IN/OUT',
+            categoryId: 'cat-investments',
+            accountType: '401k',
+          ),
+        ],
+      );
+      when(() => mockTxnRepo.updateCategory(any(), any()))
+          .thenAnswer((_) async {});
+
+      final count = await serviceWithAccounts.categorizeUncategorized();
+
+      expect(count, equals(1));
+      verify(() => mockTxnRepo.updateCategory('txn-1', 'cat-investments'))
+          .called(1);
+    });
+
+    test('investment rule does not match wrong account type', () async {
+      final txns = [
+        _makeTransaction(
+          id: 'txn-1',
+          payee: 'DIV - VANGUARD FUND',
+          amountCents: 1000,
+          accountId: 'acc-checking',
+        ),
+      ];
+
+      when(() => mockTxnRepo.getUncategorizedTransactions())
+          .thenAnswer((_) async => txns);
+      when(() => mockAccountRepo.getAllAccounts()).thenAnswer(
+        (_) async =>
+            [_makeAccount(id: 'acc-checking', accountType: 'checking')],
+      );
+      when(() => mockAutoCatRepo.getCacheEntry('DIV - VANGUARD FUND'))
+          .thenAnswer((_) async => null);
+      when(() => mockAutoCatRepo.getEnabledRules()).thenAnswer(
+        (_) async => [
+          _makeRule(
+            id: 'rule-div',
+            priority: 1,
+            payeeContains: 'DIV ',
+            categoryId: 'cat-dividends',
+            accountType: '401k',
+          ),
+        ],
+      );
+
+      final count = await serviceWithAccounts.categorizeUncategorized();
+
+      expect(count, equals(0));
+      verifyNever(() => mockTxnRepo.updateCategory(any(), any()));
+    });
   });
 }
 
@@ -649,6 +863,28 @@ Transaction _makeTransaction({
     createdAt: 0,
     updatedAt: 0,
     version: 1,
+    syncStatus: 0,
+  );
+}
+
+Account _makeAccount({
+  required String id,
+  required String accountType,
+  String name = 'Test Account',
+}) {
+  return Account(
+    id: id,
+    name: name,
+    accountType: accountType,
+    balanceCents: 0,
+    currencyCode: 'USD',
+    isAsset: true,
+    isHidden: false,
+    displayOrder: 0,
+    createdAt: 0,
+    updatedAt: 0,
+    version: 1,
+    invertSign: false,
     syncStatus: 0,
   );
 }
