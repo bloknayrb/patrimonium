@@ -40,7 +40,6 @@ class DashboardScreen extends ConsumerWidget {
               onPressed:
                   isSyncing ? null : () => _syncConnections(context, ref),
             ),
-            _InsightsBadgeButton(),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: 'Customize dashboard',
@@ -48,23 +47,9 @@ class DashboardScreen extends ConsumerWidget {
                 ref.read(dashboardEditModeProvider.notifier).state = true;
               },
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value == 'settings') {
-                  context.push(AppRoutes.settings);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'settings',
-                  child: ListTile(
-                    leading: Icon(Icons.settings_outlined),
-                    title: Text('Settings'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => context.push(AppRoutes.settings),
             ),
           ] else
             IconButton(
@@ -258,22 +243,3 @@ class _DashboardBody extends ConsumerWidget {
   }
 }
 
-class _InsightsBadgeButton extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countAsync = ref.watch(unreadInsightsCountProvider);
-    final count = countAsync.valueOrNull ?? 0;
-
-    return IconButton(
-      icon: Badge(
-        isLabelVisible: count > 0,
-        label: Text('$count'),
-        child: const Icon(Icons.notifications_outlined),
-      ),
-      tooltip: 'Insights',
-      onPressed: () {
-        StatefulNavigationShell.of(context).goBranch(4);
-      },
-    );
-  }
-}
