@@ -1,9 +1,8 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/app_error.dart';
@@ -157,19 +156,20 @@ class BackupService {
 
   /// Validates a backup DB file. Returns the schema version.
   /// Throws [BackupError] if corrupt.
+  ///
+  /// Uses raw sqlite3 (not Drift) to avoid modifying the backup's
+  /// PRAGMA user_version during validation.
   Future<int> _validateBackup(String path) async {
-    NativeDatabase? db;
+    sqlite.Database? db;
     try {
-      db = NativeDatabase(File(path));
-      final executor = db;
-      await executor.ensureOpen(_SchemaVersionReader());
-      final result = await executor.runSelect('PRAGMA integrity_check', []);
+      db = sqlite.sqlite3.open(path, mode: sqlite.OpenMode.readOnly);
+      final result = db.select('PRAGMA integrity_check');
       if (result.isEmpty || result.first['integrity_check'] != 'ok') {
         throw const BackupError(
           message: 'The backup file is corrupt and cannot be restored.',
         );
       }
-      final versionResult = await executor.runSelect('PRAGMA user_version', []);
+      final versionResult = db.select('PRAGMA user_version');
       final version = versionResult.first['user_version'] as int? ?? 0;
       return version;
     } catch (e) {
@@ -180,18 +180,7 @@ class BackupService {
         originalError: e,
       );
     } finally {
-      await db?.close();
+      db?.dispose();
     }
-  }
-}
-
-/// Minimal OpeningDetails provider for validation reads.
-class _SchemaVersionReader extends QueryExecutorUser {
-  @override
-  int get schemaVersion => 1; // Don't run migrations during validation
-
-  @override
-  Future<void> beforeOpen(QueryExecutor executor, OpeningDetails details) async {
-    // No-op — we just want to read, not migrate
   }
 }
