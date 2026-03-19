@@ -64,9 +64,6 @@ dependencies:
   # Markdown Rendering (for AI chat)
   flutter_markdown: ^0.7.6
 
-  # Gemini AI SDK
-  google_generative_ai: ^0.4.6
-
   # Loading Skeletons
   shimmer: ^3.0.0
 

@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 
 import '../../../core/di/providers.dart';
 import '../../../core/error/app_error.dart';
@@ -206,8 +205,6 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
       } else {
         _showSnackbar('Connection failed: ${e.message}');
       }
-    } on InvalidApiKey catch (_) {
-      _showSnackbar('Invalid API key. Check your credentials.');
     } catch (e) {
       _showSnackbar('Test failed: $e');
     } finally {
@@ -219,7 +216,7 @@ class _LlmSettingsScreenState extends ConsumerState<LlmSettingsScreen> {
     final dio = ref.read(llmDioClientProvider);
     switch (_selectedProvider) {
       case 'gemini':
-        return GeminiClient(apiKey: apiKey, model: _selectedModel);
+        return GeminiClient(apiKey: apiKey, dio: dio, model: _selectedModel);
       case 'claude':
         return ClaudeClient(apiKey: apiKey, dio: dio, model: _selectedModel);
       case 'openai':
