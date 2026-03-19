@@ -63,13 +63,14 @@ Future<void> main() async {
     if (kDebugMode) debugPrint('Category seeding failed: $e');
   }
 
+  // Shared repositories used by multiple startup steps
+  final accountRepo = AccountRepository(database);
+  final txnRepo = TransactionRepository(database);
+
   // Seed dev data in debug mode (before rule seeding so auto-categorize picks them up)
   if (kDebugMode) {
     try {
-      final devSeeder = DevDataSeeder(
-        AccountRepository(database),
-        TransactionRepository(database),
-      );
+      final devSeeder = DevDataSeeder(accountRepo, txnRepo);
       final seeded = await devSeeder.seedIfEmpty();
       if (seeded) debugPrint('Dev data seeded successfully');
     } catch (e) {
@@ -77,19 +78,17 @@ Future<void> main() async {
     }
   }
 
-  // Seed default auto-categorization rules and apply to existing transactions
+  // Seed default auto-categorization rules and apply to uncategorized transactions
   try {
     final autoCatRepo = AutoCategorizeRepository(database);
     final ruleSeeder = RuleSeeder(categoryRepo, autoCatRepo);
-    final rulesSeeded = await ruleSeeder.seedIfEmpty();
+    await ruleSeeder.seedIfEmpty();
 
-    if (rulesSeeded) {
-      final txnRepo = TransactionRepository(database);
-      final autoCatService = AutoCategorizeService(autoCatRepo, txnRepo);
-      await autoCatService.categorizeUncategorized();
-    }
+    final autoCatService =
+        AutoCategorizeService(autoCatRepo, txnRepo, accountRepo: accountRepo);
+    await autoCatService.categorizeUncategorized();
   } catch (e) {
-    if (kDebugMode) debugPrint('Rule seeding failed: $e');
+    if (kDebugMode) debugPrint('Rule seeding/categorization failed: $e');
   }
 
   // Reset stale sync locks from any previous crash

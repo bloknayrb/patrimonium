@@ -219,6 +219,7 @@ final autoCategorizeServiceProvider = Provider<AutoCategorizeService>((ref) {
   return AutoCategorizeService(
     ref.watch(autoCategorizeRepositoryProvider),
     ref.watch(transactionRepositoryProvider),
+    accountRepo: ref.watch(accountRepositoryProvider),
   );
 });
 
