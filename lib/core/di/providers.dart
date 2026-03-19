@@ -493,6 +493,7 @@ LlmClient? _buildLlmClient({
     case 'gemini':
       return GeminiClient(
         apiKey: apiKey!,
+        dio: dio,
         model: model ?? 'gemini-2.5-flash',
       );
     case 'claude':
